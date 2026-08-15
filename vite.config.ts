@@ -13,6 +13,7 @@ export default defineConfig({
         name: '学习工作台',
         short_name: '学习工作台',
         description: '把背诵、错题和复习计划放进每天可完成的学习节奏。',
+        lang: 'zh-CN',
         theme_color: '#16664b',
         background_color: '#f5f7f6',
         display: 'standalone',
