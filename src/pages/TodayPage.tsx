@@ -39,7 +39,10 @@ export function TodayPage({ streak }: { streak: number }) {
   const recitationCount = due.filter((item) => item.type === 'recitation').length
   const mistakeCount = due.filter((item) => item.type === 'mistake').length
   const minutes = recitationCount * 3 + mistakeCount * 5
-  const progress = data?.initialTotal ? Math.round(((data.initialDone ?? 0) / data.initialTotal) * 100) : 100
+  const targetProgress = data?.initialTotal ? Math.round(((data.initialDone ?? 0) / data.initialTotal) * 100) : 100
+  const allDone = data?.reviewedCount ?? 0
+  const allTotal = due.length + allDone
+  const allProgress = allTotal ? Math.round((allDone / allTotal) * 100) : 100
 
   return (
     <div className="page today-page">
@@ -54,14 +57,18 @@ export function TodayPage({ streak }: { streak: number }) {
       <section className="daily-summary" aria-labelledby="daily-title">
         <div className="summary-top">
           <div>
-            <span id="daily-title">今日进度</span>
+            <span id="daily-title">今日目标</span>
             <strong>{data?.initialDone ?? 0}<small> / {data?.initialTotal ?? 0}</small></strong>
           </div>
-          <div className="progress-ring" style={{ '--progress': `${progress * 3.6}deg` } as React.CSSProperties} aria-label={`完成 ${progress}%`}>
-            <span>{progress}%</span>
+          <div className="progress-ring" style={{ '--progress': `${targetProgress * 3.6}deg` } as React.CSSProperties} aria-label={`今日目标完成 ${targetProgress}%`}>
+            <span>{targetProgress}%</span>
           </div>
         </div>
-        <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
+        <div className="progress-track"><span style={{ width: `${targetProgress}%` }} /></div>
+        <div className="all-progress" aria-label={`全部待复习进度 ${allDone} / ${allTotal}`}>
+          <div><span>全部待复习</span><strong>{allDone} / {allTotal}</strong><small>{allProgress}%</small></div>
+          <div className="all-progress-track"><span style={{ width: `${allProgress}%` }} /></div>
+        </div>
         <div className="summary-stats">
           <span><BookOpenText size={17} /> 背诵 {recitationCount}</span>
           <span><BookCheck size={17} /> 错题 {mistakeCount}</span>

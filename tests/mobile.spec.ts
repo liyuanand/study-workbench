@@ -67,6 +67,8 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
   await page.getByRole('button', { name: '确认导入 2 条' }).click()
   await expect(page.getByText('一脉相承', { exact: true })).toBeVisible()
   await expect(page.getByText('薪火相传', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: '今日' }).click()
+  await expect(page.getByLabel('全部待复习进度 0 / 2')).toBeVisible()
 })
 
 test('continues to the next due item after rating', async ({ page }) => {
@@ -87,6 +89,8 @@ test('continues to the next due item after rating', async ({ page }) => {
   await page.getByRole('button', { name: '这段完成，继续' }).click()
   await page.getByRole('button', { name: '记住 进入下一阶' }).click()
   await expect(page.getByText('成语二', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: '退出复习，进度会保留' }).click()
+  await expect(page.getByLabel('全部待复习进度 1 / 2')).toBeVisible()
 })
 
 test('reloads from the service worker while offline', async ({ page, context }) => {

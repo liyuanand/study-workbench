@@ -86,6 +86,12 @@ p, h1, h2, h3 { margin-top: 0; }
 .progress-ring span { position: relative; z-index: 1; color: #fff; font-weight: 700; font-size: 13px; }
 .progress-track { height: 5px; margin: 17px 0 14px; background: #42574f; border-radius: 4px; overflow: hidden; }
 .progress-track span { display: block; height: 100%; border-radius: inherit; background: #dbab42; transition: width .25s ease; }
+.all-progress { margin: 0 0 14px; padding: 12px 0 13px; border-top: 1px solid #40554d; border-bottom: 1px solid #40554d; }
+.all-progress > div:first-child { display: grid; grid-template-columns: 1fr auto auto; align-items: baseline; gap: 9px; }
+.all-progress span, .all-progress small { color: #b9cbc4; font-size: 12px; }
+.all-progress strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.all-progress-track { height: 4px; margin-top: 9px; overflow: hidden; border-radius: 4px; background: #42574f; }
+.all-progress-track span { display: block; height: 100%; border-radius: inherit; background: #6ea8e4; transition: width .25s ease; }
 .summary-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 9px 16px; color: #d9e3df; font-size: 13px; }
 .summary-stats span { display: inline-flex; gap: 5px; align-items: center; }
 .completion-note { margin-top: 14px; padding-top: 13px; border-top: 1px solid #40554d; color: #f5ca6d; display: flex; gap: 7px; align-items: center; font-size: 13px; }
