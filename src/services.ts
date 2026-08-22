@@ -42,6 +42,24 @@ export async function addContent(
   return item
 }
 
+export async function addRecitationTemplateItems(items: Array<Pick<ContentItem, 'title' | 'category' | 'subject' | 'body' | 'tags'>>): Promise<void> {
+  const now = new Date().toISOString()
+  await db.contents.bulkAdd(items.map((values) => ({
+    id: uid('content'),
+    type: 'recitation' as const,
+    ...values,
+    imageIds: [],
+    answer: '',
+    analysis: '',
+    errorReason: '',
+    createdAt: now,
+    updatedAt: now,
+    dueDate: toDateKey(),
+    reviewStage: -1,
+    archived: false,
+  })))
+}
+
 export async function completeReview(itemId: string, rating: ReviewRating, dateKey = toDateKey()): Promise<void> {
   await ensureTodaySnapshot(dateKey)
   await db.transaction('rw', db.contents, db.reviewLogs, db.pointLedger, db.daySnapshots, db.settings, async () => {

@@ -58,6 +58,17 @@ test('stores a mistake photo and reveals the answer', async ({ page }) => {
   await expect(page.getByText('使用定义法比较函数值。')).toBeVisible()
 })
 
+test('imports a teacher idiom template into recitation items', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  await page.getByRole('button', { name: '导入成语模板' }).click()
+  await page.getByLabel('模板内容').fill(`【第二组】文化传承（2 个）\n\n#### 传承不间断\n\n一脉相承：由一个血统或一个派别世代相传。\n薪火相传：比喻学问和技艺代代相传。`)
+  await page.getByRole('button', { name: '解析并预览' }).click()
+  await expect(page.getByText('第二组 · 文化传承')).toBeVisible()
+  await page.getByRole('button', { name: '确认导入 2 条' }).click()
+  await expect(page.getByText('一脉相承', { exact: true })).toBeVisible()
+  await expect(page.getByText('薪火相传', { exact: true })).toBeVisible()
+})
+
 test('reloads from the service worker while offline', async ({ page, context }) => {
   await page.goto('/#/today')
   await page.evaluate(() => navigator.serviceWorker.ready)

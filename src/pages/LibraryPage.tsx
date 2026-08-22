@@ -1,16 +1,18 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Archive, BookOpenText, Camera, FileQuestion, Plus, Search } from 'lucide-react'
+import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Plus, Search } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
-import { addContent, saveMedia } from '../services'
+import { addContent, addRecitationTemplateItems, saveMedia } from '../services'
+import { parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
 import type { ContentItem, ContentType } from '../types'
 
 export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const [tab, setTab] = useState<ContentType>('recitation')
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState<ContentType | null>(null)
+  const [importing, setImporting] = useState(false)
   const [archiveItem, setArchiveItem] = useState<ContentItem | null>(null)
   const items = useLiveQuery(() => db.contents.filter((item) => !item.archived).reverse().sortBy('createdAt')) ?? []
   const filtered = useMemo(() => items.filter((item) => item.type === tab && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())), [items, query, tab])
@@ -25,7 +27,10 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
     <div className="page library-page">
       <header className="page-header">
         <div><span className="eyebrow">知识资产</span><h1>资料库</h1></div>
-        <button type="button" className="icon-button solid" onClick={() => setAdding(tab)} aria-label={`添加${tab === 'recitation' ? '背诵' : '错题'}`}><Plus size={22} /></button>
+        <div className="header-actions">
+          {tab === 'recitation' && <button type="button" className="icon-button" onClick={() => setImporting(true)} aria-label="导入成语模板"><FileUp size={21} /></button>}
+          <button type="button" className="icon-button solid" onClick={() => setAdding(tab)} aria-label={`添加${tab === 'recitation' ? '背诵' : '错题'}`}><Plus size={22} /></button>
+        </div>
       </header>
 
       <div className="segmented" role="tablist" aria-label="资料类型">
@@ -61,8 +66,59 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
       )}
 
       {adding && <AddContentModal type={adding} onClose={() => setAdding(null)} onSaved={(message) => { setAdding(null); notify(message) }} />}
+      {importing && <ImportTemplateModal onClose={() => setImporting(false)} onSaved={(message) => { setImporting(false); notify(message) }} />}
       {archiveItem && <ConfirmDialog title="归档这条资料？" text="归档后不会再进入今日复习，但历史记录仍会保留在备份中。" confirmLabel="确认归档" danger onConfirm={archive} onClose={() => setArchiveItem(null)} />}
     </div>
+  )
+}
+
+function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
+  const [text, setText] = useState('')
+  const [parsed, setParsed] = useState<ParsedRecitationTemplate | null>(null)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  function preview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const result = parseRecitationTemplate(text)
+    setParsed(result)
+    setError(result.items.length ? '' : '没有识别到“成语：释义”格式，请确认模板内容完整。')
+  }
+
+  async function importItems() {
+    if (!parsed?.items.length) return
+    setSaving(true)
+    try {
+      await addRecitationTemplateItems(parsed.items)
+      onSaved(`已导入 ${parsed.items.length} 条成语，今天可以开始复习`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '导入失败，请重试。')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal title="导入成语模板" onClose={onClose} wide>
+      <form className="content-form" onSubmit={preview}>
+        <p className="dialog-copy">粘贴老师发来的 Markdown 模板，系统会把每个“成语：释义”转换成一条语文背诵资料。</p>
+        <Field label="模板内容" hint="支持【组名】、#### 分栏标题，以及“成语：释义”格式。">
+          <textarea value={text} onChange={(event) => { setText(event.target.value); setParsed(null); setError('') }} rows={10} autoFocus placeholder="粘贴老师发来的模板…" />
+        </Field>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <button className="button secondary full-button" type="submit">解析并预览</button>
+      </form>
+      {parsed && parsed.items.length > 0 && (
+        <div className="import-preview" aria-live="polite">
+          <div className="import-preview-heading"><strong>{parsed.group}</strong><span>{parsed.items.length} 条{parsed.countLabel ? ` / 模板标注 ${parsed.countLabel}` : ''}</span></div>
+          <div className="import-preview-list">
+            {parsed.items.slice(0, 5).map((item) => <div key={`${item.title}-${item.category}`}><strong>{item.title}</strong><span>{item.category.split(' · ').slice(-1)[0]} · {item.body}</span></div>)}
+            {parsed.items.length > 5 && <small>还有 {parsed.items.length - 5} 条，导入后可在资料库搜索和编辑。</small>}
+          </div>
+          <button className="button primary full-button" type="button" onClick={importItems} disabled={saving}>{saving ? '正在导入…' : `确认导入 ${parsed.items.length} 条`}</button>
+        </div>
+      )}
+    </Modal>
   )
 }
 

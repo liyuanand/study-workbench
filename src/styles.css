@@ -42,6 +42,7 @@ p, h1, h2, h3 { margin-top: 0; }
 .page { min-height: 100dvh; padding: max(24px, env(safe-area-inset-top)) 18px 28px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }
 .page-header h1 { margin: 3px 0 0; font-size: 28px; line-height: 1.22; letter-spacing: 0; }
+.header-actions { display: flex; align-items: center; gap: 4px; }
 .eyebrow { color: var(--text-3); font-size: 13px; font-weight: 600; }
 .skip-link { position: fixed; left: 12px; top: -60px; z-index: 2000; background: var(--surface); padding: 10px 14px; border-radius: 6px; }
 .skip-link:focus { top: 12px; }
@@ -149,6 +150,14 @@ p, h1, h2, h3 { margin-top: 0; }
 .photo-picker.selected { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
 .photo-picker input { position: absolute; opacity: 0; pointer-events: none; }
 .form-error { margin: 0; padding: 10px 12px; border-radius: 6px; color: var(--danger); background: var(--danger-soft); font-size: 13px; line-height: 1.5; }
+.import-preview { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.import-preview-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.import-preview-heading strong { font-size: 15px; }
+.import-preview-heading span, .import-preview-list small { color: var(--text-3); font-size: 12px; }
+.import-preview-list { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+.import-preview-list > div { display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); }
+.import-preview-list > div strong { font-size: 14px; }
+.import-preview-list > div span { color: var(--text-2); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 
 .review-page { min-height: 100dvh; background: var(--surface-2); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 .review-header { min-height: calc(68px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
