@@ -123,6 +123,17 @@ export async function completeReview(itemId: string, rating: ReviewRating, dateK
   })
 }
 
+export async function getNextDueItem(currentId: string, dateKey = toDateKey()): Promise<ContentItem | undefined> {
+  const [items, logs] = await Promise.all([
+    db.contents.filter((item) => !item.archived && item.dueDate <= dateKey).toArray(),
+    db.reviewLogs.where('dateKey').equals(dateKey).toArray(),
+  ])
+  const reviewed = new Set(logs.map((log) => log.itemId))
+  return items
+    .filter((item) => item.id !== currentId && !reviewed.has(item.id))
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.createdAt.localeCompare(b.createdAt))[0]
+}
+
 export async function requestRedemption(reward: Reward): Promise<Redemption> {
   const entries = await db.pointLedger.toArray()
   const balance = calculateBalance(entries)

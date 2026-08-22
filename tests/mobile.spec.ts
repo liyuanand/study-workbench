@@ -69,6 +69,22 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
   await expect(page.getByText('薪火相传', { exact: true })).toBeVisible()
 })
 
+test('continues to the next due item after rating', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  for (const title of ['成语一', '成语二']) {
+    await page.getByRole('button', { name: '添加背诵' }).click()
+    await page.getByLabel('标题').fill(title)
+    await page.getByLabel('正文').fill(`${title}的释义。`)
+    await page.getByRole('button', { name: '保存并加入复习' }).click()
+  }
+  await page.getByRole('link', { name: '今日' }).click()
+  await page.getByRole('link', { name: '复习成语一' }).click()
+  await page.getByRole('button', { name: '查看原文' }).click()
+  await page.getByRole('button', { name: '这段完成，继续' }).click()
+  await page.getByRole('button', { name: '记住 进入下一阶' }).click()
+  await expect(page.getByText('成语二', { exact: true })).toBeVisible()
+})
+
 test('reloads from the service worker while offline', async ({ page, context }) => {
   await page.goto('/#/today')
   await page.evaluate(() => navigator.serviceWorker.ready)

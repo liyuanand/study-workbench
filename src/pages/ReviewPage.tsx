@@ -6,7 +6,7 @@ import { db } from '../db'
 import { useObjectUrl } from '../hooks'
 import { toDateKey } from '../lib/date'
 import { calculateReviewOutcome } from '../lib/schedule'
-import { completeReview } from '../services'
+import { completeReview, getNextDueItem } from '../services'
 import type { ContentItem, ReviewRating } from '../types'
 
 export function ReviewPage({ notify }: { notify: (message: string) => void }) {
@@ -14,7 +14,9 @@ export function ReviewPage({ notify }: { notify: (message: string) => void }) {
   const item = useLiveQuery(() => id ? db.contents.get(id) : undefined, [id])
   if (item === undefined) return <div className="review-loading">正在打开资料…</div>
   if (!item) return <div className="review-missing"><p>这条资料不存在或已移除。</p><Link className="button secondary" to="/today">返回今日</Link></div>
-  return item.type === 'recitation' ? <RecitationReview item={item} notify={notify} /> : <MistakeReview item={item} notify={notify} />
+  return item.type === 'recitation'
+    ? <RecitationReview key={item.id} item={item} notify={notify} />
+    : <MistakeReview key={item.id} item={item} notify={notify} />
 }
 
 function ReviewHeader({ item }: { item: ContentItem }) {
@@ -114,8 +116,9 @@ function RatingPanel({ item, intro, notify }: { item: ContentItem; intro: string
     try {
       const outcome = calculateReviewOutcome(item.reviewStage, rating, toDateKey())
       await completeReview(item.id, rating)
-      notify(`复习完成 +5 分，下次安排在 ${outcome.dueDate}`)
-      navigate('/today')
+      const next = await getNextDueItem(item.id)
+      notify(next ? '复习完成 +5 分，继续下一个' : `复习完成 +5 分，下次安排在 ${outcome.dueDate}`)
+      navigate(next ? `/review/${next.id}` : '/today')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '保存失败，请重试。')
       setSubmitting(null)
