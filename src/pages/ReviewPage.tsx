@@ -6,12 +6,27 @@ import { db } from '../db'
 import { useObjectUrl } from '../hooks'
 import { toDateKey } from '../lib/date'
 import { calculateReviewOutcome } from '../lib/schedule'
-import { completeReview, getNextDueItem } from '../services'
+import { advanceReviewSession, completeReview, getOrCreateReviewSession } from '../services'
 import type { ContentItem, ReviewRating } from '../types'
 
 export function ReviewPage({ notify }: { notify: (message: string) => void }) {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const [sessionReady, setSessionReady] = useState(false)
   const item = useLiveQuery(() => id ? db.contents.get(id) : undefined, [id])
+  useEffect(() => {
+    let cancelled = false
+    if (!id) return
+    setSessionReady(false)
+    getOrCreateReviewSession(id).then((session) => {
+      if (cancelled) return
+      const currentId = session.itemIds[session.currentIndex]
+      if (currentId && currentId !== id) navigate(`/review/${currentId}`, { replace: true })
+      setSessionReady(true)
+    }).catch(() => { if (!cancelled) setSessionReady(true) })
+    return () => { cancelled = true }
+  }, [id, navigate])
+  if (!sessionReady) return <div className="review-loading">正在恢复复习进度…</div>
   if (item === undefined) return <div className="review-loading">正在打开资料…</div>
   if (!item) return <div className="review-missing"><p>这条资料不存在或已移除。</p><Link className="button secondary" to="/today">返回今日</Link></div>
   return item.type === 'recitation'
@@ -22,7 +37,7 @@ export function ReviewPage({ notify }: { notify: (message: string) => void }) {
 function ReviewHeader({ item }: { item: ContentItem }) {
   return (
     <header className="review-header">
-      <Link to="/today" className="icon-button" aria-label="返回今日"><ArrowLeft size={22} /></Link>
+      <Link to="/today" className="icon-button" aria-label="退出复习，进度会保留" title="退出复习，进度会保留"><ArrowLeft size={22} /></Link>
       <div><span>{item.type === 'recitation' ? '背诵复习' : '错题复习'}</span><strong>{item.title}</strong></div>
       <span className="stage-badge">{item.reviewStage < 0 ? '新' : `${item.reviewStage + 1} 阶`}</span>
     </header>
@@ -116,9 +131,9 @@ function RatingPanel({ item, intro, notify }: { item: ContentItem; intro: string
     try {
       const outcome = calculateReviewOutcome(item.reviewStage, rating, toDateKey())
       await completeReview(item.id, rating)
-      const next = await getNextDueItem(item.id)
-      notify(next ? '复习完成 +5 分，继续下一个' : `复习完成 +5 分，下次安排在 ${outcome.dueDate}`)
-      navigate(next ? `/review/${next.id}` : '/today')
+      const nextId = await advanceReviewSession(item.id)
+      notify(nextId ? '复习完成 +5 分，继续下一个' : `复习完成 +5 分，下次安排在 ${outcome.dueDate}`)
+      navigate(nextId ? `/review/${nextId}` : '/today')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '保存失败，请重试。')
       setSubmitting(null)

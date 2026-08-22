@@ -43,6 +43,14 @@ export interface DaySnapshot {
   completionRewarded: boolean
 }
 
+export interface ReviewSession {
+  id: 'active'
+  dateKey: string
+  itemIds: string[]
+  currentIndex: number
+  updatedAt: string
+}
+
 export type PointReason = 'review' | 'daily_complete' | 'redemption' | 'adjustment'
 
 export interface PointLedgerEntry {
@@ -97,6 +105,7 @@ export interface BackupPayload {
   rewards: Reward[]
   redemptions: Redemption[]
   settings: AppSettings[]
+  reviewSessions?: ReviewSession[]
 }
 
 export interface ReviewOutcome {

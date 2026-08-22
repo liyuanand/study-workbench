@@ -10,6 +10,7 @@ import type {
   Redemption,
   ReviewRating,
   Reward,
+  ReviewSession,
 } from './types'
 
 export async function ensureTodaySnapshot(dateKey = toDateKey()): Promise<void> {
@@ -134,6 +135,43 @@ export async function getNextDueItem(currentId: string, dateKey = toDateKey()): 
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.createdAt.localeCompare(b.createdAt))[0]
 }
 
+export async function getOrCreateReviewSession(startId: string, dateKey = toDateKey()): Promise<ReviewSession> {
+  const existing = await db.reviewSessions.get('active')
+  if (existing && existing.dateKey === dateKey && existing.currentIndex < existing.itemIds.length) {
+    const currentId = existing.itemIds[existing.currentIndex]
+    const current = currentId ? await db.contents.get(currentId) : undefined
+    if (current && !current.archived) return existing
+  }
+
+  const [items, logs] = await Promise.all([
+    db.contents.filter((item) => !item.archived && item.dueDate <= dateKey).toArray(),
+    db.reviewLogs.where('dateKey').equals(dateKey).toArray(),
+  ])
+  const reviewed = new Set(logs.map((log) => log.itemId))
+  const queue = items
+    .filter((item) => !reviewed.has(item.id))
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.createdAt.localeCompare(b.createdAt))
+    .map((item) => item.id)
+  if (!queue.includes(startId)) queue.unshift(startId)
+  const session: ReviewSession = { id: 'active', dateKey, itemIds: queue, currentIndex: Math.max(0, queue.indexOf(startId)), updatedAt: new Date().toISOString() }
+  await db.reviewSessions.put(session)
+  return session
+}
+
+export async function advanceReviewSession(itemId: string, dateKey = toDateKey()): Promise<string | undefined> {
+  const session = await db.reviewSessions.get('active')
+  if (!session || session.dateKey !== dateKey) return undefined
+  const index = session.itemIds.indexOf(itemId)
+  const nextIndex = index >= 0 ? index + 1 : session.currentIndex + 1
+  const nextId = session.itemIds[nextIndex]
+  if (!nextId) {
+    await db.reviewSessions.delete('active')
+    return undefined
+  }
+  await db.reviewSessions.update('active', { currentIndex: nextIndex, updatedAt: new Date().toISOString() })
+  return nextId
+}
+
 export async function requestRedemption(reward: Reward): Promise<Redemption> {
   const entries = await db.pointLedger.toArray()
   const balance = calculateBalance(entries)
@@ -244,6 +282,7 @@ export async function exportBackup(): Promise<BackupPayload> {
     rewards: await db.rewards.toArray(),
     redemptions: await db.redemptions.toArray(),
     settings: await db.settings.toArray(),
+    reviewSessions: await db.reviewSessions.toArray(),
   }
 }
 
@@ -270,6 +309,7 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
     if (payload.rewards.length) await db.rewards.bulkAdd(payload.rewards)
     if (payload.redemptions.length) await db.redemptions.bulkAdd(payload.redemptions)
     if (payload.settings.length) await db.settings.bulkAdd(payload.settings)
+    if (payload.reviewSessions?.length) await db.reviewSessions.bulkAdd(payload.reviewSessions)
   })
 }
 

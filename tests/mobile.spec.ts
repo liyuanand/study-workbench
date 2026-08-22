@@ -79,6 +79,10 @@ test('continues to the next due item after rating', async ({ page }) => {
   }
   await page.getByRole('link', { name: '今日' }).click()
   await page.getByRole('link', { name: '复习成语一' }).click()
+  await expect(page.getByText('成语一', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: '退出复习，进度会保留' }).click()
+  await page.getByRole('link', { name: '复习成语一' }).click()
+  await expect(page.getByText('成语一', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: '查看原文' }).click()
   await page.getByRole('button', { name: '这段完成，继续' }).click()
   await page.getByRole('button', { name: '记住 进入下一阶' }).click()

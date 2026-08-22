@@ -7,6 +7,7 @@ import type {
   PointLedgerEntry,
   Redemption,
   ReviewLog,
+  ReviewSession,
   Reward,
 } from './types'
 
@@ -19,6 +20,7 @@ class StudyDatabase extends Dexie {
   rewards!: EntityTable<Reward, 'id'>
   redemptions!: EntityTable<Redemption, 'id'>
   settings!: EntityTable<AppSettings, 'id'>
+  reviewSessions!: EntityTable<ReviewSession, 'id'>
 
   constructor() {
     super('study-workbench-v1')
@@ -32,6 +34,8 @@ class StudyDatabase extends Dexie {
       redemptions: 'id, rewardId, status, requestedAt',
       settings: 'id',
     })
+    // Version upgrades only add the resumable session store. Existing tables are untouched.
+    this.version(2).stores({ reviewSessions: 'id' })
   }
 }
 
