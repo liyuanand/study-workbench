@@ -56,7 +56,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-frame">
+    <div className={`app-frame ${settings?.eyeCareMode ? 'eye-care' : ''} reading-size-${settings?.readingFontSize ?? 'standard'}`}>
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <main id="main-content" className={isReview ? 'main review-main' : 'main'}>
         <Routes>

@@ -55,6 +55,8 @@ export async function ensureDefaults(): Promise<void> {
       streak: 0,
       lastCompletedDate: '',
       dailyNewLimit: 100,
+      eyeCareMode: false,
+      readingFontSize: 'standard',
       createdAt: now,
       updatedAt: now,
     })
@@ -62,6 +64,12 @@ export async function ensureDefaults(): Promise<void> {
   const settings = await db.settings.get('main')
   if (settings && !Number.isInteger(settings.dailyNewLimit)) {
     await db.settings.update('main', { dailyNewLimit: 100, updatedAt: now })
+  }
+  if (settings && typeof settings.eyeCareMode !== 'boolean') {
+    await db.settings.update('main', { eyeCareMode: false, updatedAt: now })
+  }
+  if (settings && !['standard', 'large', 'xlarge'].includes(settings.readingFontSize)) {
+    await db.settings.update('main', { readingFontSize: 'standard', updatedAt: now })
   }
   if ((await db.rewards.count()) === 0) {
     await db.rewards.bulkAdd([

@@ -1,12 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArchiveRestore, BarChart3, Check, ChevronRight, Coins, Database, Download, Gift, HardDrive, KeyRound, LockKeyhole, Plus, ShieldCheck, Upload } from 'lucide-react'
+import { ArchiveRestore, BarChart3, Check, ChevronRight, Coins, Database, Download, Eye, Gift, HardDrive, KeyRound, LockKeyhole, Plus, ShieldCheck, Type, Upload } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 import { ConfirmDialog, Field, Modal } from '../components/ui'
 import { db, uid } from '../db'
 import { hashPin, makeSalt, verifyPin } from '../lib/crypto'
 import { calculateBalance } from '../lib/points'
 import { addPointAdjustment, exportBackup, getWeeklyMetrics, importBackup, resolveRedemption, validateBackup } from '../services'
-import type { AppSettings, BackupPayload, Reward } from '../types'
+import type { AppSettings, BackupPayload, ReadingFontSize, Reward } from '../types'
 
 export function MePage({ notify }: { notify: (message: string) => void }) {
   const settings = useLiveQuery(() => db.settings.get('main'))
@@ -54,6 +54,10 @@ export function MePage({ notify }: { notify: (message: string) => void }) {
     window.setTimeout(() => window.location.reload(), 500)
   }
 
+  async function updateDisplay(values: Partial<Pick<AppSettings, 'eyeCareMode' | 'readingFontSize'>>) {
+    await db.settings.update('main', { ...values, updatedAt: new Date().toISOString() })
+  }
+
   const usedMb = storage ? (storage.usage / 1024 / 1024).toFixed(1) : '—'
   const percent = storage?.quota ? Math.min(100, (storage.usage / storage.quota) * 100) : 0
 
@@ -62,6 +66,24 @@ export function MePage({ notify }: { notify: (message: string) => void }) {
       <header className="page-header"><div><span className="eyebrow">本机学习空间</span><h1>我的</h1></div></header>
 
       <section className="privacy-band"><ShieldCheck size={22} /><div><strong>资料仅保存在当前设备</strong><span>不会上传到 GitHub，也不会用于云端分析。</span></div></section>
+
+      <section className="settings-section">
+        <h2>显示与阅读</h2>
+        <div className="display-setting-row">
+          <span className="settings-icon green"><Eye size={20} /></span>
+          <span><strong>护眼模式</strong><small>柔和绿色纸面，降低长时间阅读刺激</small></span>
+          <label className="switch"><span className="sr-only">护眼模式</span><input key={String(settings?.eyeCareMode ?? false)} type="checkbox" defaultChecked={settings?.eyeCareMode ?? false} onChange={(event) => updateDisplay({ eyeCareMode: event.target.checked })} /><span aria-hidden="true" /></label>
+        </div>
+        <div className="font-setting">
+          <div className="font-setting-heading"><span className="settings-icon blue"><Type size={20} /></span><span><strong>阅读字号</strong><small>调整背诵原文、答案和解析的大小</small></span></div>
+          <div className="font-size-options" role="group" aria-label="阅读字号">
+            {([['standard', '标准'], ['large', '大'], ['xlarge', '特大']] as Array<[ReadingFontSize, string]>).map(([value, label]) => (
+              <button key={value} type="button" className={settings?.readingFontSize === value ? 'active' : ''} aria-pressed={settings?.readingFontSize === value} onClick={() => updateDisplay({ readingFontSize: value })}>{label}</button>
+            ))}
+          </div>
+          <p className="font-preview">学而时习之，不亦说乎。</p>
+        </div>
+      </section>
 
       <section className="settings-section">
         <h2>家长协作</h2>

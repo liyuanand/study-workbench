@@ -178,6 +178,23 @@ test('reloads from the service worker while offline', async ({ page, context }) 
   await context.setOffline(false)
 })
 
+test('persists eye-care mode and reading font size', async ({ page }) => {
+  await page.getByRole('link', { name: '我的' }).click()
+  await page.getByRole('checkbox', { name: '护眼模式' }).check()
+  await page.getByRole('button', { name: '特大', exact: true }).click()
+  await expect(page.locator('.app-frame')).toHaveClass(/eye-care/)
+  await expect(page.locator('.app-frame')).toHaveClass(/reading-size-xlarge/)
+  const enabled = await page.locator('.app-frame').evaluate((element) => ({
+    eyeCare: element.classList.contains('eye-care'),
+    size: getComputedStyle(element).getPropertyValue('--reading-font-size').trim(),
+    background: getComputedStyle(element).backgroundColor,
+  }))
+  expect(enabled).toEqual({ eyeCare: true, size: '24px', background: 'rgb(247, 249, 241)' })
+  await page.reload()
+  await expect(page.getByRole('checkbox', { name: '护眼模式' })).toBeChecked()
+  await expect(page.getByRole('button', { name: '特大', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('keeps dark mode, reduced motion and touch targets usable', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
   await page.goto('/#/today')

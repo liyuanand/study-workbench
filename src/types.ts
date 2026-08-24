@@ -1,5 +1,6 @@
 export type ContentType = 'recitation' | 'mistake'
 export type ReviewRating = 'forgot' | 'fuzzy' | 'remembered'
+export type ReadingFontSize = 'standard' | 'large' | 'xlarge'
 
 export interface ContentItem {
   id: string
@@ -95,6 +96,8 @@ export interface AppSettings {
   streak: number
   lastCompletedDate: string
   dailyNewLimit: number
+  eyeCareMode: boolean
+  readingFontSize: ReadingFontSize
   createdAt: string
   updatedAt: string
 }

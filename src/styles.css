@@ -21,6 +21,7 @@
   --text-3: #66726e;
   --border: #dce2df;
   --shadow: 0 8px 24px rgba(26, 45, 38, 0.08);
+  --reading-font-size: 18px;
   color-scheme: light dark;
 }
 
@@ -37,6 +38,10 @@ p, h1, h2, h3 { margin-top: 0; }
 :focus-visible { outline: 3px solid rgba(50, 106, 168, .42); outline-offset: 2px; }
 
 .app-frame { width: 100%; max-width: 480px; min-height: 100dvh; margin: 0 auto; background: var(--surface); position: relative; box-shadow: 0 0 40px rgba(33, 49, 43, .12); }
+.app-frame.eye-care { color-scheme: light; --primary: #3f704b; --primary-strong: #315a3a; --primary-soft: #dfeadb; --blue: #456d78; --blue-soft: #e1eceb; --amber: #87651d; --amber-soft: #f4edd8; --danger: #a3423d; --danger-soft: #f5e5df; --surface: #f7f9f1; --surface-2: #eef3e7; --surface-3: #e2ead9; --text: #1d2920; --text-2: #4b5b4e; --text-3: #657267; --border: #d2ddca; }
+.app-frame.reading-size-standard { --reading-font-size: 18px; }
+.app-frame.reading-size-large { --reading-font-size: 21px; }
+.app-frame.reading-size-xlarge { --reading-font-size: 24px; }
 .main { min-height: 100dvh; padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
 .review-main { padding-bottom: 0; }
 .page { min-height: 100dvh; padding: max(24px, env(safe-area-inset-top)) 18px 28px; }
@@ -155,7 +160,7 @@ p, h1, h2, h3 { margin-top: 0; }
 .detail-section { margin: 0; padding: 22px 18px; border-bottom: 1px solid var(--border); }
 .detail-section.warning { border-left: 3px solid var(--amber); }
 .detail-section h2 { margin: 0 0 12px; color: var(--text-3); font-size: 13px; }
-.detail-section p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; font-size: 16px; }
+.detail-section p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; font-size: var(--reading-font-size); }
 .detail-images { display: flex; flex-direction: column; gap: 12px; }
 .detail-images img { width: 100%; height: auto; max-height: 68dvh; object-fit: contain; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); }
 .detail-empty { color: var(--text-3); font-size: 14px !important; }
@@ -214,11 +219,11 @@ p, h1, h2, h3 { margin-top: 0; }
 .section-counter { color: var(--text-3); font-size: 13px; margin-bottom: 16px; }
 .context-block { margin-bottom: 14px; }
 .context-block span, .answer-block > span { display: block; margin-bottom: 6px; color: var(--text-3); font-size: 12px; font-weight: 650; }
-.context-block p { margin: 0; padding: 13px 14px; border-left: 3px solid var(--border); color: var(--text-2); background: var(--surface); line-height: 1.75; font-size: 14px; }
+.context-block p { margin: 0; padding: 13px 14px; border-left: 3px solid var(--border); color: var(--text-2); background: var(--surface); line-height: 1.8; font-size: calc(var(--reading-font-size) - 2px); }
 .masked-block { min-height: 270px; padding: 28px 24px; border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: var(--blue); background: var(--surface); }
 .masked-block > span { color: var(--text-3); font-size: 13px; }
 .masked-block.revealed { align-items: stretch; justify-content: flex-start; text-align: left; color: var(--text); }
-.masked-block.revealed p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 18px; line-height: 1.9; }
+.masked-block.revealed p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reading-font-size); line-height: 1.95; }
 .review-action { margin-top: 16px; }
 .review-prompt { color: var(--text-2); line-height: 1.6; }
 .question-image-wrap { min-height: 240px; border: 1px solid var(--border); border-radius: 8px; display: grid; place-items: center; overflow: hidden; background: var(--surface); }
@@ -229,7 +234,7 @@ p, h1, h2, h3 { margin-top: 0; }
 .answer-stage { display: flex; flex-direction: column; gap: 12px; }
 .answer-block { padding: 15px; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); }
 .answer-block.warning { border-left: 3px solid var(--amber); }
-.answer-block p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.answer-block p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; font-size: var(--reading-font-size); }
 .rating-panel { padding: 28px 18px; text-align: center; background: var(--surface); border-radius: 8px; }
 .answer-stage .rating-panel { margin-top: 4px; }
 .rating-panel > svg { color: var(--primary); }
@@ -291,6 +296,16 @@ p, h1, h2, h3 { margin-top: 0; }
 .settings-row strong { font-size: 14px; }
 .settings-row small { color: var(--text-3); font-size: 11px; }
 .settings-state { color: var(--text-3); font-size: 11px; }
+.display-setting-row { min-height: 70px; padding: 7px 0; display: grid; grid-template-columns: 42px minmax(0, 1fr) 48px; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+.display-setting-row > span:nth-child(2), .font-setting-heading > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.display-setting-row strong, .font-setting strong { font-size: 14px; }
+.display-setting-row small, .font-setting small { color: var(--text-3); font-size: 11px; line-height: 1.45; }
+.font-setting { padding: 14px 0 16px; border-bottom: 1px solid var(--border); }
+.font-setting-heading { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 10px; }
+.font-size-options { height: 46px; margin: 14px 0 12px; padding: 3px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; border-radius: 7px; background: var(--surface-2); }
+.font-size-options button { min-height: 40px; border: 0; border-radius: 5px; color: var(--text-2); background: transparent; font-weight: 650; }
+.font-size-options button.active { color: var(--text); background: var(--surface); box-shadow: 0 1px 5px rgba(20, 35, 29, .08); }
+.font-preview { margin: 0; padding: 13px 14px; border-left: 3px solid var(--primary); color: var(--text-2); background: var(--surface-2); font-size: var(--reading-font-size); line-height: 1.8; }
 .storage-card { padding: 14px 0 15px; border-bottom: 1px solid var(--border); }
 .storage-card > div:first-child { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; }
 .storage-card > div:first-child span { color: var(--text-3); font-size: 12px; }
