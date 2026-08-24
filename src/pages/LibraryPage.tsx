@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Images, Plus, Search, X } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
@@ -10,7 +10,8 @@ import { parseKnowledgeTemplate, parseRecitationTemplate, type ParsedRecitationT
 import type { ContentItem, ContentType } from '../types'
 
 export function LibraryPage({ notify }: { notify: (message: string) => void }) {
-  const [tab, setTab] = useState<ContentType>('recitation')
+  const location = useLocation()
+  const [tab, setTab] = useState<ContentType>(() => new URLSearchParams(location.search).get('type') === 'mistake' ? 'mistake' : 'recitation')
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState<ContentType | null>(null)
   const [importing, setImporting] = useState(false)
@@ -49,7 +50,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
         <div className="library-list">
           {filtered.map((item) => (
             <article key={item.id} className="library-row">
-              <Link to={`/review/${item.id}`} className="library-main">
+              <Link to={`/library/${item.id}`} className="library-main" aria-label={`查看${item.title}`}>
                 <span className={`library-icon ${item.type}`} aria-hidden="true">{item.type === 'recitation' ? <BookOpenText size={21} /> : <FileQuestion size={21} />}</span>
                 <span className="library-copy"><strong>{item.title}</strong><small>{item.subject || item.category || '未分类'} · 下次 {item.dueDate}</small></span>
               </Link>

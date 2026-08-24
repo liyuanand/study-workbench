@@ -6,6 +6,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { db, ensureDefaults } from './db'
 import { ensureTodaySnapshot } from './services'
 import { GrowthPage } from './pages/GrowthPage'
+import { ContentDetailPage } from './pages/ContentDetailPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { MePage } from './pages/MePage'
 import { ReviewPage } from './pages/ReviewPage'
@@ -61,6 +62,7 @@ export default function App() {
         <Routes>
           <Route path="/today" element={<TodayPage streak={settings?.streak ?? 0} />} />
           <Route path="/library" element={<LibraryPage notify={setToast} />} />
+          <Route path="/library/:id" element={<ContentDetailPage />} />
           <Route path="/growth" element={<GrowthPage notify={setToast} />} />
           <Route path="/me" element={<MePage notify={setToast} />} />
           <Route path="/review/:id" element={<ReviewPage notify={setToast} />} />

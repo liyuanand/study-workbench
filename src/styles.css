@@ -138,6 +138,29 @@ p, h1, h2, h3 { margin-top: 0; }
 .library-copy strong { font-size: 15px; overflow-wrap: anywhere; }
 .library-copy small { color: var(--text-3); font-size: 12px; }
 
+.detail-page { padding-left: 0; padding-right: 0; }
+.detail-header { min-height: 68px; padding: 0 12px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+.detail-header > div { min-width: 0; }
+.detail-header > div > span { color: var(--text-3); font-size: 11px; }
+.detail-header h1 { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
+.detail-type { min-height: 30px; padding: 0 9px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px; color: var(--blue); background: var(--blue-soft); font-size: 12px; font-weight: 650; }
+.detail-type.mistake { color: var(--amber); background: var(--amber-soft); }
+.detail-meta { margin: 0; padding: 16px 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-bottom: 1px solid var(--border); }
+.detail-meta div { min-width: 0; }
+.detail-meta dt { margin-bottom: 4px; color: var(--text-3); font-size: 11px; }
+.detail-meta dd { margin: 0; overflow-wrap: anywhere; color: var(--text-2); font-size: 13px; }
+.detail-tags { padding: 14px 18px 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.detail-tags span { padding: 5px 8px; border-radius: 5px; color: var(--blue); background: var(--blue-soft); font-size: 11px; }
+.detail-content { display: flex; flex-direction: column; }
+.detail-section { margin: 0; padding: 22px 18px; border-bottom: 1px solid var(--border); }
+.detail-section.warning { border-left: 3px solid var(--amber); }
+.detail-section h2 { margin: 0 0 12px; color: var(--text-3); font-size: 13px; }
+.detail-section p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; font-size: 16px; }
+.detail-images { display: flex; flex-direction: column; gap: 12px; }
+.detail-images img { width: 100%; height: auto; max-height: 68dvh; object-fit: contain; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); }
+.detail-empty { color: var(--text-3); font-size: 14px !important; }
+.detail-state { min-height: calc(100dvh - 86px); padding: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-2); }
+
 .modal-backdrop { position: fixed; z-index: 500; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: env(safe-area-inset-top); background: rgba(13, 20, 18, .56); }
 .modal-sheet { width: 100%; max-width: 480px; max-height: min(86dvh, 760px); display: flex; flex-direction: column; background: var(--surface); border-radius: 8px 8px 0 0; box-shadow: var(--shadow); animation: sheet-in .22s ease-out; }
 .modal-wide { max-height: 94dvh; }
