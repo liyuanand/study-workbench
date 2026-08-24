@@ -43,6 +43,39 @@ export async function addContent(
   return item
 }
 
+export async function addMistakePhotoBatch(
+  files: File[],
+  values: Pick<ContentItem, 'title' | 'subject' | 'tags' | 'answer' | 'analysis' | 'errorReason'>,
+): Promise<number> {
+  let saved = 0
+  const digits = Math.max(2, String(files.length).length)
+  for (const [index, file] of files.entries()) {
+    let media: MediaAsset | undefined
+    try {
+      media = await saveMedia(file)
+      const numberedTitle = files.length === 1 ? values.title : `${values.title} ${String(index + 1).padStart(digits, '0')}`
+      await addContent({
+        type: 'mistake',
+        title: numberedTitle,
+        category: '错题',
+        subject: values.subject,
+        body: '',
+        tags: values.tags,
+        imageIds: [media.id],
+        answer: values.answer,
+        analysis: values.analysis,
+        errorReason: values.errorReason,
+      })
+      saved += 1
+    } catch (error) {
+      if (media) await db.media.delete(media.id)
+      const detail = error instanceof Error ? error.message : '保存失败。'
+      throw new Error(saved ? `已成功导入 ${saved} 张，第 ${saved + 1} 张失败。${detail}` : detail)
+    }
+  }
+  return saved
+}
+
 export async function addRecitationTemplateItems(items: Array<Pick<ContentItem, 'title' | 'category' | 'subject' | 'body' | 'tags'>>): Promise<void> {
   const now = new Date().toISOString()
   await db.contents.bulkAdd(items.map((values) => ({

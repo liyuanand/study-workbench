@@ -1,10 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Plus, Search } from 'lucide-react'
+import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Images, Plus, Search, X } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
-import { addContent, addRecitationTemplateItems, saveMedia } from '../services'
+import { useObjectUrl } from '../hooks'
+import { addContent, addMistakePhotoBatch, addRecitationTemplateItems } from '../services'
 import { parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
 import type { ContentItem, ContentType } from '../types'
 
@@ -125,7 +126,18 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
 function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClose: () => void; onSaved: (message: string) => void }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
+
+  function addFiles(nextFiles: File[]) {
+    setFiles((current) => {
+      const merged = [...current]
+      for (const file of nextFiles) {
+        const key = `${file.name}-${file.size}-${file.lastModified}`
+        if (!merged.some((entry) => `${entry.name}-${entry.size}-${entry.lastModified}` === key)) merged.push(file)
+      }
+      return merged
+    })
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -137,21 +149,26 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
       const body = String(form.get('body') ?? '').trim()
       if (!title) throw new Error('请填写标题。')
       if (type === 'recitation' && !body) throw new Error('请填写要背诵的正文。')
-      if (type === 'mistake' && !file) throw new Error('请拍照或选择一道错题图片。')
-      const imageIds = file ? [(await saveMedia(file)).id] : []
-      await addContent({
+      if (type === 'mistake' && !files.length) throw new Error('请拍照或从相册选择错题图片。')
+      const commonValues = {
         type,
         title,
         category: String(form.get('category') ?? '').trim(),
         subject: String(form.get('subject') ?? '').trim(),
         body,
         tags: String(form.get('tags') ?? '').split(/[,，]/).map((tag) => tag.trim()).filter(Boolean),
-        imageIds,
+        imageIds: [],
         answer: String(form.get('answer') ?? '').trim(),
         analysis: String(form.get('analysis') ?? '').trim(),
         errorReason: String(form.get('errorReason') ?? '').trim(),
-      })
-      onSaved(type === 'recitation' ? '背诵资料已加入今天的新内容' : '错题已保存并加入今天的新内容')
+      }
+      if (type === 'mistake') {
+        const count = await addMistakePhotoBatch(files, commonValues)
+        onSaved(`已导入 ${count} 道错题并加入今天的新内容`)
+      } else {
+        await addContent(commonValues)
+        onSaved('背诵资料已加入今天的新内容')
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '保存失败，请重试。')
     } finally {
@@ -162,7 +179,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
   return (
     <Modal title={type === 'recitation' ? '添加背诵资料' : '添加错题'} onClose={onClose} wide>
       <form className="content-form" onSubmit={submit}>
-        <Field label="标题"><input name="title" autoFocus maxLength={60} placeholder={type === 'recitation' ? '例如：劝学（节选）' : '例如：函数单调性第 3 题'} /></Field>
+        <Field label={type === 'recitation' ? '标题' : files.length > 1 ? '标题前缀' : '标题'} hint={type === 'mistake' && files.length > 1 ? `将自动保存为“标题前缀 01”至“标题前缀 ${String(files.length).padStart(2, '0')}”。` : undefined}><input name="title" autoFocus maxLength={60} placeholder={type === 'recitation' ? '例如：劝学（节选）' : files.length > 1 ? '例如：八月数学错题' : '例如：函数单调性第 3 题'} /></Field>
         {type === 'recitation' ? (
           <>
             <div className="field-grid">
@@ -173,12 +190,25 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
           </>
         ) : (
           <>
-            <Field label="原题照片" hint="图片只保存在当前设备，保存时会自动压缩。">
-              <label className={`photo-picker ${file ? 'selected' : ''}`}>
-                <Camera size={24} />
-                <span>{file ? file.name : '拍照或从相册选择'}</span>
-                <input type="file" accept="image/*" capture="environment" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-              </label>
+            <Field label="原题照片" hint="可连续拍照或从相册多选；每张照片会生成一道独立错题。">
+              <div className="photo-source-grid">
+                <label className="photo-source-button">
+                  <Camera size={22} /><span>拍照</span>
+                  <input aria-label="拍照添加错题" type="file" accept="image/*" capture="environment" onChange={(event) => { addFiles([...event.target.files ?? []]); event.target.value = '' }} />
+                </label>
+                <label className="photo-source-button">
+                  <Images size={22} /><span>从相册选择</span><small>支持多选</small>
+                  <input aria-label="从相册选择错题照片（可多选）" type="file" accept="image/*" multiple onChange={(event) => { addFiles([...event.target.files ?? []]); event.target.value = '' }} />
+                </label>
+              </div>
+              {files.length > 0 && (
+                <div className="selected-photos" aria-live="polite">
+                  <div><strong>已选择 {files.length} 张</strong><button type="button" className="button text-button" onClick={() => setFiles([])}>全部清除</button></div>
+                  <div className="selected-photo-list">
+                    {files.map((selected, index) => <SelectedPhotoRow key={`${selected.name}-${selected.size}-${selected.lastModified}`} file={selected} index={index} onRemove={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} />)}
+                  </div>
+                </div>
+              )}
             </Field>
             <Field label="学科"><input name="subject" placeholder="数学" /></Field>
             <Field label="答案"><textarea name="answer" rows={3} placeholder="正确答案或关键步骤" /></Field>
@@ -188,8 +218,13 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
         )}
         <Field label="标签" hint="多个标签用逗号分隔。"><input name="tags" placeholder="期中, 重点" /></Field>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="button primary full-button" disabled={saving}>{saving ? '正在保存…' : '保存并加入复习'}</button>
+        <button className="button primary full-button" disabled={saving}>{saving ? `正在压缩并保存 ${files.length || 1} 张…` : type === 'mistake' && files.length > 1 ? `保存 ${files.length} 道并加入复习` : '保存并加入复习'}</button>
       </form>
     </Modal>
   )
+}
+
+function SelectedPhotoRow({ file, index, onRemove }: { file: File; index: number; onRemove: () => void }) {
+  const preview = useObjectUrl(file)
+  return <span><img src={preview} alt="" /><i>{index + 1}</i><b>{file.name}</b><button type="button" className="icon-button" aria-label={`移除${file.name}`} onClick={onRemove}><X size={17} /></button></span>
 }

@@ -45,7 +45,9 @@ test('stores a mistake photo and reveals the answer', async ({ page }) => {
   await page.getByRole('link', { name: '资料库' }).click()
   await page.getByRole('tab', { name: /错题本/ }).click()
   await page.getByRole('button', { name: '添加错题' }).click()
-  await page.locator('input[type="file"]').setInputFiles(path.resolve('public/icon-512.png'))
+  await expect(page.getByLabel('拍照添加错题')).toHaveAttribute('capture', 'environment')
+  await expect(page.getByLabel('从相册选择错题照片（可多选）')).toHaveAttribute('multiple', '')
+  await page.getByLabel('从相册选择错题照片（可多选）').setInputFiles(path.resolve('public/icon-512.png'))
   await page.locator('input[name="title"]').fill('函数单调性错题')
   await page.locator('input[name="subject"]').fill('数学')
   await page.locator('textarea[name="answer"]').fill('先判断定义域。')
@@ -56,6 +58,22 @@ test('stores a mistake photo and reveals the answer', async ({ page }) => {
   await expect(page.getByRole('img', { name: '函数单调性错题原题' })).toBeVisible()
   await page.getByRole('button', { name: '查看答案与解析' }).click()
   await expect(page.getByText('使用定义法比较函数值。')).toBeVisible()
+})
+
+test('imports multiple mistake photos from the album', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  await page.getByRole('tab', { name: /错题本/ }).click()
+  await page.getByRole('button', { name: '添加错题' }).click()
+  await page.getByLabel('从相册选择错题照片（可多选）').setInputFiles([
+    path.resolve('public/icon-192.png'),
+    path.resolve('public/icon-512.png'),
+  ])
+  await expect(page.getByText('已选择 2 张')).toBeVisible()
+  await page.getByLabel('标题前缀').fill('八月数学错题')
+  await page.getByLabel('学科').fill('数学')
+  await page.getByRole('button', { name: '保存 2 道并加入复习' }).click()
+  await expect(page.getByText('八月数学错题 01', { exact: true })).toBeVisible()
+  await expect(page.getByText('八月数学错题 02', { exact: true })).toBeVisible()
 })
 
 test('imports a teacher idiom template into recitation items', async ({ page }) => {
