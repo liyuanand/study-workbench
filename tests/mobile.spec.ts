@@ -84,7 +84,7 @@ test('imports multiple mistake photos from the album', async ({ page }) => {
 
 test('imports a teacher idiom template into recitation items', async ({ page }) => {
   await page.getByRole('link', { name: '资料库' }).click()
-  await page.getByRole('button', { name: '导入成语模板' }).click()
+  await page.getByRole('button', { name: '批量导入背诵资料' }).click()
   await page.getByLabel('模板内容').fill(`【第二组】文化传承（2 个）\n\n#### 传承不间断\n\n一脉相承：由一个血统或一个派别世代相传。\n薪火相传：比喻学问和技艺代代相传。`)
   await page.getByRole('button', { name: '解析并预览' }).click()
   await expect(page.getByText('第二组 · 文化传承')).toBeVisible()
@@ -98,7 +98,7 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
 test('caps a large import at 100 new items per day', async ({ page }) => {
   const rows = Array.from({ length: 105 }, (_, index) => `成语${String(index + 1).padStart(3, '0')}：第 ${index + 1} 条释义。`).join('\n')
   await page.getByRole('link', { name: '资料库' }).click()
-  await page.getByRole('button', { name: '导入成语模板' }).click()
+  await page.getByRole('button', { name: '批量导入背诵资料' }).click()
   await page.getByLabel('模板内容').fill(`【大批量】成语积累（105 个）\n\n#### 今日积累\n${rows}`)
   await page.getByRole('button', { name: '解析并预览' }).click()
   await page.getByRole('button', { name: '确认导入 105 条' }).click()
@@ -106,6 +106,29 @@ test('caps a large import at 100 new items per day', async ({ page }) => {
   await expect(page.getByLabel('全部待复习进度 0 / 105')).toBeVisible()
   await expect(page.getByText(/还有 5 条新内容待安排/)).toBeVisible()
   await expect(page.locator('.content-row')).toHaveCount(100)
+})
+
+test('imports and reviews a structured math knowledge template', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  await page.getByRole('button', { name: '批量导入背诵资料' }).click()
+  await page.getByRole('tab', { name: '知识点模板' }).click()
+  await page.getByLabel('模板内容').fill(`【数学知识】函数专题
+
+### 一元二次方程
+【考点精析】
+一般形式为 ax²+bx+c=0，其中 a≠0。
+【知识延伸】
+求根公式为 x=(-b±√Δ)/2a。`)
+  await page.getByRole('button', { name: '解析并预览' }).click()
+  await expect(page.getByText('数学知识 · 函数专题', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '确认导入 1 条' }).click()
+  await page.getByRole('link', { name: /一元二次方程/ }).click()
+  await expect(page.getByText('第 1 段 / 共 2 段')).toBeVisible()
+  await page.getByRole('button', { name: '查看原文' }).click()
+  await expect(page.getByText(/一般形式为/)).toBeVisible()
+  await page.getByRole('button', { name: '这段完成，继续' }).click()
+  await page.getByRole('button', { name: '查看原文' }).click()
+  await expect(page.getByText(/求根公式为/)).toBeVisible()
 })
 
 test('continues to the next due item after rating', async ({ page }) => {

@@ -55,3 +55,60 @@ export function parseRecitationTemplate(markdown: string): ParsedRecitationTempl
 
   return { group, countLabel, items }
 }
+
+export function parseKnowledgeTemplate(markdown: string): ParsedRecitationTemplate {
+  let groupLabel = '知识点'
+  let topic = '未分类'
+  let subject = '其他'
+  let title = ''
+  let section: 'analysis' | 'extension' | null = null
+  let analysisLines: string[] = []
+  let extensionLines: string[] = []
+  const items: ParsedRecitationTemplateItem[] = []
+
+  function flush() {
+    const analysis = analysisLines.join(' ').trim()
+    const extension = extensionLines.join(' ').trim()
+    if (title && analysis && !items.some((item) => item.title === title)) {
+      items.push({
+        title,
+        category: [groupLabel, topic].filter(Boolean).join(' · '),
+        subject,
+        body: [`【考点精析】 ${analysis}`, extension ? `【知识延伸】 ${extension}` : ''].filter(Boolean).join('\n\n'),
+        tags: [groupLabel, topic, '知识点'].filter(Boolean),
+      })
+    }
+    analysisLines = []
+    extensionLines = []
+    section = null
+  }
+
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || /^-{3,}$/.test(line)) continue
+
+    const heading = line.match(/^#{3,6}\s+(.+?)\s*$/)
+    if (heading) {
+      flush()
+      title = heading[1].trim()
+      continue
+    }
+
+    if (line === '【考点精析】') { section = 'analysis'; continue }
+    if (line === '【知识延伸】') { section = 'extension'; continue }
+
+    const header = line.match(/^【([^】]+)】\s*(.*)$/)
+    if (header && !title) {
+      groupLabel = header[1].trim() || '知识点'
+      topic = header[2].trim() || '未分类'
+      subject = groupLabel.replace(/知识|专题|学科/g, '').trim() || '其他'
+      continue
+    }
+
+    if (section === 'analysis') analysisLines.push(line)
+    if (section === 'extension') extensionLines.push(line)
+  }
+  flush()
+
+  return { group: [groupLabel, topic].filter(Boolean).join(' · '), countLabel: '', items }
+}

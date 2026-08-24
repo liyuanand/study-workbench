@@ -6,7 +6,7 @@ import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
 import { addContent, addMistakePhotoBatch, addRecitationTemplateItems } from '../services'
-import { parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
+import { parseKnowledgeTemplate, parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
 import type { ContentItem, ContentType } from '../types'
 
 export function LibraryPage({ notify }: { notify: (message: string) => void }) {
@@ -29,7 +29,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
       <header className="page-header">
         <div><span className="eyebrow">知识资产</span><h1>资料库</h1></div>
         <div className="header-actions">
-          {tab === 'recitation' && <button type="button" className="icon-button" onClick={() => setImporting(true)} aria-label="导入成语模板"><FileUp size={21} /></button>}
+          {tab === 'recitation' && <button type="button" className="icon-button" onClick={() => setImporting(true)} aria-label="批量导入背诵资料"><FileUp size={21} /></button>}
           <button type="button" className="icon-button solid" onClick={() => setAdding(tab)} aria-label={`添加${tab === 'recitation' ? '背诵' : '错题'}`}><Plus size={22} /></button>
         </div>
       </header>
@@ -74,6 +74,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
 }
 
 function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
+  const [mode, setMode] = useState<'idiom' | 'knowledge'>('idiom')
   const [text, setText] = useState('')
   const [parsed, setParsed] = useState<ParsedRecitationTemplate | null>(null)
   const [error, setError] = useState('')
@@ -81,9 +82,9 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
 
   function preview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const result = parseRecitationTemplate(text)
+    const result = mode === 'idiom' ? parseRecitationTemplate(text) : parseKnowledgeTemplate(text)
     setParsed(result)
-    setError(result.items.length ? '' : '没有识别到“成语：释义”格式，请确认模板内容完整。')
+    setError(result.items.length ? '' : mode === 'idiom' ? '没有识别到“成语：释义”格式，请确认模板内容完整。' : '没有识别到完整知识点。每条必须包含“### 标题”和“【考点精析】”。')
   }
 
   async function importItems() {
@@ -91,7 +92,7 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
     setSaving(true)
     try {
       await addRecitationTemplateItems(parsed.items)
-      onSaved(`已导入 ${parsed.items.length} 条成语，今天可以开始复习`)
+      onSaved(`已导入 ${parsed.items.length} 条${mode === 'idiom' ? '成语' : '知识点'}，系统将按学习计划安排`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '导入失败，请重试。')
     } finally {
@@ -100,11 +101,15 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
   }
 
   return (
-    <Modal title="导入成语模板" onClose={onClose} wide>
+    <Modal title="批量导入" onClose={onClose} wide>
+      <div className="segmented import-type-tabs" role="tablist" aria-label="导入模板类型">
+        <button type="button" role="tab" aria-selected={mode === 'idiom'} className={mode === 'idiom' ? 'active' : ''} onClick={() => { setMode('idiom'); setText(''); setParsed(null); setError('') }}>成语模板</button>
+        <button type="button" role="tab" aria-selected={mode === 'knowledge'} className={mode === 'knowledge' ? 'active' : ''} onClick={() => { setMode('knowledge'); setText(''); setParsed(null); setError('') }}>知识点模板</button>
+      </div>
       <form className="content-form" onSubmit={preview}>
-        <p className="dialog-copy">粘贴老师发来的 Markdown 模板，系统会把每个“成语：释义”转换成一条语文背诵资料。</p>
-        <Field label="模板内容" hint="支持【组名】、#### 分栏标题，以及“成语：释义”格式。">
-          <textarea value={text} onChange={(event) => { setText(event.target.value); setParsed(null); setError('') }} rows={10} autoFocus placeholder="粘贴老师发来的模板…" />
+        <p className="dialog-copy">{mode === 'idiom' ? '每个“成语：释义”会转换成一条语文背诵资料。' : '每个“### 标题”会转换成一条背诵资料，考点精析和知识延伸分段复习。'}</p>
+        <Field label="模板内容" hint={mode === 'idiom' ? '支持【组名】、#### 分栏标题，以及“成语：释义”格式。' : '格式：【数学知识】专题、### 标题、【考点精析】正文、【知识延伸】正文。'}>
+          <textarea value={text} onChange={(event) => { setText(event.target.value); setParsed(null); setError('') }} rows={10} autoFocus placeholder={mode === 'idiom' ? '粘贴老师发来的成语模板…' : '粘贴数学、物理或其他学科知识点模板…'} />
         </Field>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button secondary full-button" type="submit">解析并预览</button>
