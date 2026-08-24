@@ -54,9 +54,14 @@ export async function ensureDefaults(): Promise<void> {
       pinHash: '',
       streak: 0,
       lastCompletedDate: '',
+      dailyNewLimit: 100,
       createdAt: now,
       updatedAt: now,
     })
+  }
+  const settings = await db.settings.get('main')
+  if (settings && !Number.isInteger(settings.dailyNewLimit)) {
+    await db.settings.update('main', { dailyNewLimit: 100, updatedAt: now })
   }
   if ((await db.rewards.count()) === 0) {
     await db.rewards.bulkAdd([

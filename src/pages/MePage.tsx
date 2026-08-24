@@ -133,6 +133,7 @@ function ParentGate({ settings, onClose, notify }: { settings: AppSettings; onCl
 }
 
 function ParentDashboard({ onClose, notify }: { onClose: () => void; notify: (message: string) => void }) {
+  const settings = useLiveQuery(() => db.settings.get('main'))
   const rewards = useLiveQuery(() => db.rewards.toArray()) ?? []
   const pending = useLiveQuery(() => db.redemptions.where('status').equals('pending').toArray()) ?? []
   const ledger = useLiveQuery(() => db.pointLedger.toArray()) ?? []
@@ -149,6 +150,14 @@ function ParentDashboard({ onClose, notify }: { onClose: () => void; notify: (me
     catch (error) { notify(error instanceof Error ? error.message : '处理失败') }
   }
 
+  async function saveStudyPace(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const limit = Number(new FormData(event.currentTarget).get('dailyNewLimit'))
+    if (!Number.isInteger(limit) || limit < 20 || limit > 100) { notify('每日新学数量需要设置在 20–100 之间'); return }
+    await db.settings.update('main', { dailyNewLimit: limit, updatedAt: new Date().toISOString() })
+    notify('每日新学上限已保存，将从下一天的计划开始生效')
+  }
+
   return (
     <Modal title="家长入口" onClose={onClose} wide>
       <div className="parent-dashboard">
@@ -156,6 +165,14 @@ function ParentDashboard({ onClose, notify }: { onClose: () => void; notify: (me
           <div><BarChart3 size={19} /><span>7 天完成率</span><strong>{completionRate}%</strong></div>
           <div><Check size={19} /><span>完成复习</span><strong>{completed}</strong></div>
           <div><ArchiveRestore size={19} /><span>当前积压</span><strong>{metrics?.backlog ?? 0}</strong></div>
+        </section>
+
+        <section className="parent-section">
+          <h3>学习节奏</h3>
+          <form className="daily-limit-form" onSubmit={saveStudyPace}>
+            <Field label="每日新学上限" hint="可设置 20–100 条。到期复习不占此额度；到期复习超过 150 条时，当天自动暂停新学。"><input key={settings?.dailyNewLimit} name="dailyNewLimit" type="number" inputMode="numeric" min={20} max={100} step={10} defaultValue={settings?.dailyNewLimit ?? 100} /></Field>
+            <button className="button secondary" type="submit">保存设置</button>
+          </form>
         </section>
 
         {pending.length > 0 && <section className="parent-section"><h3>待确认兑换</h3>{pending.map((item) => <div className="pending-row" key={item.id}><div><strong>{item.rewardName}</strong><span>{item.cost} 积分</span></div><button className="button secondary compact" onClick={() => resolve(item.id, false)}>拒绝</button><button className="button primary compact" onClick={() => resolve(item.id, true)}>确认</button></div>)}</section>}

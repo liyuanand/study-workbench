@@ -2,6 +2,7 @@ import { db, uid } from './db'
 import { addDays, dateKeysBack, toDateKey } from './lib/date'
 import { calculateBalance, canRequestReward } from './lib/points'
 import { calculateReviewOutcome } from './lib/schedule'
+import { buildDailySchedule, DEFAULT_DAILY_NEW_LIMIT, REVIEW_PAUSE_THRESHOLD } from './lib/dailyPlan'
 import type {
   BackupPayload,
   ContentItem,
@@ -13,30 +14,49 @@ import type {
   ReviewSession,
 } from './types'
 
-export const DAILY_REVIEW_LIMIT = 100
-
 function sortDueItems(items: ContentItem[]): ContentItem[] {
   return items.sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.createdAt.localeCompare(b.createdAt))
 }
 
 export async function ensureTodaySnapshot(dateKey = toDateKey()): Promise<void> {
-  const dueItems = sortDueItems(await db.contents
+  const [dueItems, settings] = await Promise.all([db.contents
     .filter((item) => !item.archived && item.dueDate <= dateKey)
-    .toArray())
+    .toArray(), db.settings.get('main')])
+  sortDueItems(dueItems)
+  const dailyNewLimit = settings?.dailyNewLimit ?? DEFAULT_DAILY_NEW_LIMIT
+  const reviewItems = dueItems.filter((item) => item.reviewStage >= 0)
   const existing = await db.daySnapshots.get(dateKey)
   if (!existing) {
-    const ids = dueItems.slice(0, DAILY_REVIEW_LIMIT).map((item) => item.id)
-    await db.daySnapshots.add({ dateKey, itemIds: ids, scheduledItemIds: ids, createdAt: new Date().toISOString(), completionRewarded: false })
+    const { newIds, scheduledIds: ids } = buildDailySchedule(dueItems, dailyNewLimit)
+    await db.daySnapshots.add({ dateKey, itemIds: ids, scheduledItemIds: ids, newItemIds: newIds, newItemLimit: dailyNewLimit, newLearningPaused: reviewItems.length > REVIEW_PAUSE_THRESHOLD, createdAt: new Date().toISOString(), completionRewarded: false })
     return
   }
-  const targetIds = existing.itemIds.slice(0, DAILY_REVIEW_LIMIT)
-  const scheduled = [...new Set([...(existing.scheduledItemIds ?? targetIds), ...targetIds])].slice(0, DAILY_REVIEW_LIMIT)
-  for (const item of dueItems) {
-    if (scheduled.length >= DAILY_REVIEW_LIMIT) break
-    if (!scheduled.includes(item.id)) scheduled.push(item.id)
+
+  if (!existing.newItemIds) {
+    const historicalLogs = await db.reviewLogs.where('dateKey').below(dateKey).toArray()
+    const previouslyReviewed = new Set(historicalLogs.map((log) => log.itemId))
+    const oldScheduled = existing.scheduledItemIds ?? existing.itemIds
+    const migratedNewIds = reviewItems.length > REVIEW_PAUSE_THRESHOLD
+      ? []
+      : oldScheduled.filter((id) => !previouslyReviewed.has(id)).slice(0, dailyNewLimit)
+    const scheduled = [...new Set([
+      ...reviewItems.map((item) => item.id),
+      ...oldScheduled.filter((id) => previouslyReviewed.has(id)),
+      ...migratedNewIds,
+    ])]
+    await db.daySnapshots.update(dateKey, { itemIds: scheduled, scheduledItemIds: scheduled, newItemIds: migratedNewIds, newItemLimit: dailyNewLimit, newLearningPaused: reviewItems.length > REVIEW_PAUSE_THRESHOLD })
+    return
   }
-  if (existing.itemIds.length !== targetIds.length || !existing.scheduledItemIds || existing.scheduledItemIds.length !== scheduled.length || scheduled.some((id, index) => existing.scheduledItemIds?.[index] !== id)) {
-    await db.daySnapshots.update(dateKey, { itemIds: targetIds, scheduledItemIds: scheduled })
+
+  const existingScheduled = existing.scheduledItemIds ?? existing.itemIds
+  const newSet = new Set(existing.newItemIds)
+  const scheduled = [...new Set([
+    ...reviewItems.map((item) => item.id),
+    ...existingScheduled.filter((id) => !newSet.has(id)),
+    ...existing.newItemIds,
+  ])]
+  if (!existing.scheduledItemIds || existing.scheduledItemIds.length !== scheduled.length || scheduled.some((id, index) => existing.scheduledItemIds?.[index] !== id) || existing.newItemLimit === undefined || existing.newLearningPaused === undefined) {
+    await db.daySnapshots.update(dateKey, { scheduledItemIds: scheduled, newItemLimit: existing.newItemLimit ?? dailyNewLimit, newLearningPaused: existing.newLearningPaused ?? (reviewItems.length > REVIEW_PAUSE_THRESHOLD) })
   }
 }
 
@@ -44,12 +64,16 @@ async function addToTodaySchedule(itemIds: string[], dateKey = toDateKey()): Pro
   await ensureTodaySnapshot(dateKey)
   const snapshot = await db.daySnapshots.get(dateKey)
   if (!snapshot) return
-  const scheduled = [...new Set(snapshot.scheduledItemIds ?? snapshot.itemIds)].slice(0, DAILY_REVIEW_LIMIT)
+  const dailyNewLimit = snapshot.newItemLimit ?? DEFAULT_DAILY_NEW_LIMIT
+  if (snapshot.newLearningPaused) return
+  const scheduled = [...new Set(snapshot.scheduledItemIds ?? snapshot.itemIds)]
+  const newIds = [...new Set(snapshot.newItemIds ?? [])]
   for (const id of itemIds) {
-    if (scheduled.length >= DAILY_REVIEW_LIMIT) break
+    if (newIds.length >= dailyNewLimit) break
+    if (!newIds.includes(id)) newIds.push(id)
     if (!scheduled.includes(id)) scheduled.push(id)
   }
-  await db.daySnapshots.update(dateKey, { scheduledItemIds: scheduled })
+  await db.daySnapshots.update(dateKey, { scheduledItemIds: scheduled, newItemIds: newIds })
 }
 
 export async function addContent(
@@ -130,7 +154,7 @@ export async function completeReview(itemId: string, rating: ReviewRating, dateK
     if (!item || item.archived) throw new Error('这条资料已不存在或已归档。')
     const snapshot = await db.daySnapshots.get(dateKey)
     const scheduledIds = snapshot?.scheduledItemIds ?? snapshot?.itemIds ?? []
-    if (!scheduledIds.includes(itemId)) throw new Error(`今天最多复习 ${DAILY_REVIEW_LIMIT} 项，这条内容已排在后续。`)
+    if (!scheduledIds.includes(itemId)) throw new Error('这条新内容尚未排入今天，请先完成到期复习。')
 
     const existing = await db.reviewLogs.where('[itemId+dateKey]').equals([itemId, dateKey]).first()
     const outcome = calculateReviewOutcome(item.reviewStage, rating, dateKey)
@@ -203,21 +227,19 @@ export async function getOrCreateReviewSession(startId: string, dateKey = toDate
   await ensureTodaySnapshot(dateKey)
   const snapshot = await db.daySnapshots.get(dateKey)
   const allowed = new Set(snapshot?.scheduledItemIds ?? snapshot?.itemIds ?? [])
+  const logs = await db.reviewLogs.where('dateKey').equals(dateKey).toArray()
+  const reviewed = new Set(logs.map((log) => log.itemId))
+  const queue = (snapshot?.scheduledItemIds ?? snapshot?.itemIds ?? []).filter((id) => !reviewed.has(id))
   const existing = await db.reviewSessions.get('active')
   if (existing && existing.dateKey === dateKey && existing.currentIndex < existing.itemIds.length) {
     const currentId = existing.itemIds[existing.currentIndex]
     const current = currentId ? await db.contents.get(currentId) : undefined
-    if (current && !current.archived && allowed.has(current.id)) {
-      const remaining = existing.itemIds.slice(existing.currentIndex).filter((id) => allowed.has(id))
-      const resumed = { ...existing, itemIds: remaining, currentIndex: 0 }
+    if (current && !current.archived && allowed.has(current.id) && currentId === queue[0]) {
+      const resumed = { ...existing, itemIds: queue, currentIndex: 0 }
       await db.reviewSessions.put(resumed)
       return resumed
     }
   }
-
-  const logs = await db.reviewLogs.where('dateKey').equals(dateKey).toArray()
-  const reviewed = new Set(logs.map((log) => log.itemId))
-  const queue = (snapshot?.scheduledItemIds ?? snapshot?.itemIds ?? []).filter((id) => !reviewed.has(id))
   const session: ReviewSession = { id: 'active', dateKey, itemIds: queue, currentIndex: Math.max(0, queue.indexOf(startId)), updatedAt: new Date().toISOString() }
   await db.reviewSessions.put(session)
   return session

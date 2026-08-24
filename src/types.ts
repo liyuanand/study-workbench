@@ -40,6 +40,9 @@ export interface DaySnapshot {
   dateKey: string
   itemIds: string[]
   scheduledItemIds?: string[]
+  newItemIds?: string[]
+  newItemLimit?: number
+  newLearningPaused?: boolean
   createdAt: string
   completionRewarded: boolean
 }
@@ -91,6 +94,7 @@ export interface AppSettings {
   pinHash: string
   streak: number
   lastCompletedDate: string
+  dailyNewLimit: number
   createdAt: string
   updatedAt: string
 }

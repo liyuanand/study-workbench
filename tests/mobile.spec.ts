@@ -31,6 +31,12 @@ test('sets a parent pin and reaches reward management', async ({ page }) => {
   await page.getByRole('button', { name: '保存并进入' }).click()
   await expect(page.getByRole('heading', { name: '奖励管理' })).toBeVisible()
   await expect(page.getByText('7 天完成率')).toBeVisible()
+  const dailyLimit = page.getByLabel(/每日新学上限/)
+  await expect(dailyLimit).toHaveValue('100')
+  await dailyLimit.fill('80')
+  await page.getByRole('button', { name: '保存设置' }).click()
+  await expect(page.getByText('每日新学上限已保存，将从下一天的计划开始生效')).toBeVisible()
+  await expect(dailyLimit).toHaveValue('80')
 })
 
 test('has no horizontal overflow at the target viewport', async ({ page }) => {
@@ -89,7 +95,7 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
   await expect(page.getByLabel('全部待复习进度 0 / 2')).toBeVisible()
 })
 
-test('caps a large import at 100 scheduled reviews per day', async ({ page }) => {
+test('caps a large import at 100 new items per day', async ({ page }) => {
   const rows = Array.from({ length: 105 }, (_, index) => `成语${String(index + 1).padStart(3, '0')}：第 ${index + 1} 条释义。`).join('\n')
   await page.getByRole('link', { name: '资料库' }).click()
   await page.getByRole('button', { name: '导入成语模板' }).click()
@@ -98,7 +104,7 @@ test('caps a large import at 100 scheduled reviews per day', async ({ page }) =>
   await page.getByRole('button', { name: '确认导入 105 条' }).click()
   await page.getByRole('link', { name: '今日' }).click()
   await expect(page.getByLabel('全部待复习进度 0 / 105')).toBeVisible()
-  await expect(page.getByText(/还有 5 项待安排/)).toBeVisible()
+  await expect(page.getByText(/还有 5 条新内容待安排/)).toBeVisible()
   await expect(page.locator('.content-row')).toHaveCount(100)
 })
 
