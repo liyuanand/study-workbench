@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BookCheck, BookOpenText, CheckCircle2, CircleAlert, Flame, Plus } from 'lucide-react'
+import { BookCheck, BookOpenText, CheckCircle2, CircleAlert, Clock3, Flame, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { ContentRow, DueAlert } from '../components/ContentRow'
 import { EmptyState } from '../components/ui'
@@ -20,10 +20,14 @@ export function TodayPage({ streak }: { streak: number }) {
       db.reviewLogs.where('dateKey').equals(today).toArray(),
     ])
     const reviewed = new Set(logs.map((log) => log.itemId))
-    const due = items.filter((item) => !reviewed.has(item.id))
     const snapshotIds = new Set(snapshot?.itemIds ?? [])
+    const scheduledIds = new Set(snapshot?.scheduledItemIds ?? snapshot?.itemIds ?? [])
+    const allDue = items.filter((item) => !reviewed.has(item.id))
+    const due = allDue.filter((item) => scheduledIds.has(item.id))
     return {
       due: due.sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.createdAt.localeCompare(b.createdAt)),
+      allDueCount: allDue.length,
+      backlogCount: allDue.filter((item) => !scheduledIds.has(item.id)).length,
       reviewedCount: reviewed.size,
       initialTotal: snapshot?.itemIds.length ?? 0,
       initialDone: snapshot?.itemIds.filter((id) => reviewed.has(id)).length ?? 0,
@@ -41,7 +45,7 @@ export function TodayPage({ streak }: { streak: number }) {
   const minutes = recitationCount * 3 + mistakeCount * 5
   const targetProgress = data?.initialTotal ? Math.round(((data.initialDone ?? 0) / data.initialTotal) * 100) : 100
   const allDone = data?.reviewedCount ?? 0
-  const allTotal = due.length + allDone
+  const allTotal = (data?.allDueCount ?? 0) + allDone
   const allProgress = allTotal ? Math.round((allDone / allTotal) * 100) : 100
 
   return (
@@ -78,6 +82,7 @@ export function TodayPage({ streak }: { streak: number }) {
       </section>
 
       <DueAlert count={overdue.length} />
+      {(data?.backlogCount ?? 0) > 0 && <div className="backlog-notice"><Clock3 size={18} /><span>还有 <strong>{data?.backlogCount}</strong> 项待安排。每天最多学习 100 项，系统会自动顺延。</span></div>}
 
       {due.length === 0 ? (
         <EmptyState

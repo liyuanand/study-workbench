@@ -96,6 +96,8 @@ p, h1, h2, h3 { margin-top: 0; }
 .summary-stats span { display: inline-flex; gap: 5px; align-items: center; }
 .completion-note { margin-top: 14px; padding-top: 13px; border-top: 1px solid #40554d; color: #f5ca6d; display: flex; gap: 7px; align-items: center; font-size: 13px; }
 .due-alert { min-height: 44px; padding: 11px 13px; border-radius: 6px; display: flex; gap: 8px; align-items: center; color: var(--danger); background: var(--danger-soft); font-size: 13px; margin-bottom: 20px; }
+.backlog-notice { min-height: 52px; padding: 11px 13px; border-radius: 6px; display: flex; gap: 9px; align-items: flex-start; color: var(--blue); background: var(--blue-soft); font-size: 13px; line-height: 1.55; margin-bottom: 20px; }
+.backlog-notice svg { flex: 0 0 auto; margin-top: 1px; }
 
 .task-sections { display: flex; flex-direction: column; gap: 24px; }
 .task-group > header, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }

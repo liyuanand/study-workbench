@@ -89,6 +89,19 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
   await expect(page.getByLabel('全部待复习进度 0 / 2')).toBeVisible()
 })
 
+test('caps a large import at 100 scheduled reviews per day', async ({ page }) => {
+  const rows = Array.from({ length: 105 }, (_, index) => `成语${String(index + 1).padStart(3, '0')}：第 ${index + 1} 条释义。`).join('\n')
+  await page.getByRole('link', { name: '资料库' }).click()
+  await page.getByRole('button', { name: '导入成语模板' }).click()
+  await page.getByLabel('模板内容').fill(`【大批量】成语积累（105 个）\n\n#### 今日积累\n${rows}`)
+  await page.getByRole('button', { name: '解析并预览' }).click()
+  await page.getByRole('button', { name: '确认导入 105 条' }).click()
+  await page.getByRole('link', { name: '今日' }).click()
+  await expect(page.getByLabel('全部待复习进度 0 / 105')).toBeVisible()
+  await expect(page.getByText(/还有 5 项待安排/)).toBeVisible()
+  await expect(page.locator('.content-row')).toHaveCount(100)
+})
+
 test('continues to the next due item after rating', async ({ page }) => {
   await page.getByRole('link', { name: '资料库' }).click()
   for (const title of ['成语一', '成语二']) {

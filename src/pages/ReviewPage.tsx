@@ -21,11 +21,14 @@ export function ReviewPage({ notify }: { notify: (message: string) => void }) {
     getOrCreateReviewSession(id).then((session) => {
       if (cancelled) return
       const currentId = session.itemIds[session.currentIndex]
-      if (currentId && currentId !== id) navigate(`/review/${currentId}`, { replace: true })
+      if (!currentId) {
+        notify('今天的学习额度已完成，其余内容会在后续安排。')
+        navigate('/today', { replace: true })
+      } else if (currentId !== id) navigate(`/review/${currentId}`, { replace: true })
       setSessionReady(true)
     }).catch(() => { if (!cancelled) setSessionReady(true) })
     return () => { cancelled = true }
-  }, [id, navigate])
+  }, [id, navigate, notify])
   if (!sessionReady) return <div className="review-loading">正在恢复复习进度…</div>
   if (item === undefined) return <div className="review-loading">正在打开资料…</div>
   if (!item) return <div className="review-missing"><p>这条资料不存在或已移除。</p><Link className="button secondary" to="/today">返回今日</Link></div>

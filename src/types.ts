@@ -39,6 +39,7 @@ export interface ReviewLog {
 export interface DaySnapshot {
   dateKey: string
   itemIds: string[]
+  scheduledItemIds?: string[]
   createdAt: string
   completionRewarded: boolean
 }
