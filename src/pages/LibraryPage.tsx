@@ -83,14 +83,14 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
       )}
 
       {adding && <AddContentModal type={adding} onClose={() => setAdding(null)} onSaved={(message) => { setAdding(null); notify(message) }} />}
-      {importing && <ImportTemplateModal onClose={() => setImporting(false)} onSaved={(message) => { setImporting(false); notify(message) }} />}
+      {importing && <ImportTemplateModal initialMode={tab === 'essay' ? 'essay' : 'idiom'} onClose={() => setImporting(false)} onSaved={(message) => { setImporting(false); notify(message) }} />}
       {archiveItem && <ConfirmDialog title="归档这条资料？" text="归档后不会再进入今日复习，但历史记录仍会保留在备份中。" confirmLabel="确认归档" danger onConfirm={archive} onClose={() => setArchiveItem(null)} />}
     </div>
   )
 }
 
-function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
-  const [mode, setMode] = useState<'idiom' | 'knowledge' | 'essay'>('idiom')
+function ImportTemplateModal({ initialMode, onClose, onSaved }: { initialMode: 'idiom' | 'essay'; onClose: () => void; onSaved: (message: string) => void }) {
+  const [mode, setMode] = useState<'idiom' | 'knowledge' | 'essay'>(initialMode)
   const [text, setText] = useState('')
   const [parsed, setParsed] = useState<ParsedRecitationTemplate | null>(null)
   const [error, setError] = useState('')
