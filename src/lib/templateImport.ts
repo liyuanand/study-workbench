@@ -117,15 +117,21 @@ export function parseEssayTemplate(markdown: string): ParsedRecitationTemplate {
   let group = '作文素材'
   let kind = '未分类'
   let title = ''
-  let section = ''
   let lines: string[] = []
+  let fields: Record<string, string> = {}
   const items: ParsedRecitationTemplateItem[] = []
   function flush() {
     const body = lines.join('\n').trim()
-    if (title && body && !items.some((item) => item.title === title)) {
-      items.push({ title, category: `作文训练 · ${kind} · ${section || '作文素材'}`, subject: '语文', body, tags: [kind, section || '作文素材', '作文'] })
+    const usage = fields['使用说明'] || ''
+    const fullBody = [body, usage ? `【使用说明】${usage}` : ''].filter(Boolean).join('\n\n')
+    if (title && fullBody && !items.some((item) => item.title === title)) {
+      const theme = fields['主题'] || kind
+      const type = fields['类型'] || '作文素材'
+      const position = fields['适用位置'] || '作文素材'
+      const tags = (fields['标签'] || '').split(/[、,，]/).map((tag) => tag.trim()).filter(Boolean)
+      items.push({ title, category: `作文训练 · ${theme} · ${type}`, subject: '语文', body: fullBody, tags: [...new Set([theme, position, type, ...tags, '作文'])] })
     }
-    lines = []
+    lines = []; fields = {}
   }
   for (const rawLine of markdown.split(/\r?\n/)) {
     const line = rawLine.trim()
@@ -133,10 +139,10 @@ export function parseEssayTemplate(markdown: string): ParsedRecitationTemplate {
     const groupHeader = line.match(/^【作文素材】\s*(.*)$/)
     if (groupHeader && !title) { group = groupHeader[0]; kind = groupHeader[1].trim() || '未分类'; continue }
     const heading = line.match(/^#{2,6}\s+(.+?)\s*$/)
-    if (heading) { flush(); title = heading[1].trim(); section = ''; continue }
+    if (heading) { flush(); title = heading[1].trim(); continue }
     const field = line.match(/^【([^】]+)】\s*(.*)$/)
     if (field && !title) { kind = field[2].trim() || field[1].trim() || kind; continue }
-    if (field) { section = field[1].trim(); if (field[2]) lines.push(field[2].trim()); continue }
+    if (field) { fields[field[1].trim()] = field[2].trim(); continue }
     lines.push(line)
   }
   flush()

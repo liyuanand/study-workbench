@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArchiveRestore, BarChart3, Check, ChevronRight, Coins, Database, Download, Eye, Gift, HardDrive, KeyRound, LockKeyhole, Plus, ShieldCheck, Type, Upload } from 'lucide-react'
+import { ArchiveRestore, BarChart3, Check, ChevronRight, Coins, Database, Download, Eye, ExternalLink, Gift, HardDrive, KeyRound, LockKeyhole, Plus, ShieldCheck, Type, Upload } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 import { ConfirmDialog, Field, Modal } from '../components/ui'
 import { db, uid } from '../db'
@@ -66,6 +66,14 @@ export function MePage({ notify }: { notify: (message: string) => void }) {
       <header className="page-header"><div><span className="eyebrow">本机学习空间</span><h1>我的</h1></div></header>
 
       <section className="privacy-band"><ShieldCheck size={22} /><div><strong>资料仅保存在当前设备</strong><span>不会上传到 GitHub，也不会用于云端分析。</span></div></section>
+
+      <section className="settings-section">
+        <h2>作文工具</h2>
+        <a className="settings-row" href="./essay-extractor.html" target="_blank" rel="noreferrer">
+          <span className="settings-icon blue"><ExternalLink size={20} /></span>
+          <span><strong>范文提取器</strong><small>用 DeepSeek 提取结构、金句和论据，生成可导入模板</small></span><ChevronRight size={19} />
+        </a>
+      </section>
 
       <section className="settings-section">
         <h2>显示与阅读</h2>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseKnowledgeTemplate, parseRecitationTemplate } from './templateImport'
+import { parseEssayTemplate, parseKnowledgeTemplate, parseRecitationTemplate } from './templateImport'
 
 describe('parseRecitationTemplate', () => {
   it('parses group, sections and idiom definitions', () => {
@@ -60,5 +60,20 @@ describe('parseKnowledgeTemplate', () => {
 速度变化量与时间的比值。`)
     expect(result.items.map((item) => item.title)).toEqual(['加速度'])
     expect(result.items[0].body).toBe('【考点精析】 速度变化量与时间的比值。')
+  })
+})
+
+describe('parseEssayTemplate', () => {
+  it('maps AI-exported fields into category and tags', () => {
+    const result = parseEssayTemplate(`【作文素材】DeepSeek 提取
+## 坚持的开头
+【类型】结构模板
+【主题】坚持、成长
+【适用位置】开头
+真正的坚持，需要在行动中不断积累。
+【使用说明】替换题目关键词。
+【标签】议论文、开头`)
+    expect(result.items[0]).toMatchObject({ category: '作文训练 · 坚持、成长 · 结构模板', body: '真正的坚持，需要在行动中不断积累。\n\n【使用说明】替换题目关键词。' })
+    expect(result.items[0].tags).toContain('开头')
   })
 })

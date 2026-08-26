@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f7f2">
+  <title>作文范文提取器</title>
+  <style>
+    :root{font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#1d2920;background:#e9eeea;line-height:1.6}*{box-sizing:border-box}body{margin:0;min-width:320px}.app{max-width:480px;min-height:100dvh;margin:auto;padding:24px 18px 40px;background:#f7f9f1}.eyebrow{color:#657267;font-size:13px;font-weight:650}.title{margin:3px 0 8px;font-size:28px;line-height:1.2}.intro{margin:0 0 20px;color:#4b5b4e;font-size:14px}.panel{padding:16px;margin-bottom:14px;border:1px solid #d2ddca;border-radius:8px;background:#fff}.panel h2{margin:0 0 10px;font-size:16px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.field span{font-size:13px;font-weight:650}.field small{color:#657267;font-size:12px}.field input,.field textarea{width:100%;min-height:46px;padding:10px 11px;border:1px solid #cbd7c7;border-radius:6px;background:#fff;color:#1d2920;font:inherit;font-size:16px}.field textarea{min-height:180px;resize:vertical}.file-picker{min-height:46px;padding:11px;border:1px dashed #99b19a;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3f704b;background:#f1f6ed;font-size:14px;font-weight:650;cursor:pointer}.file-picker input{display:none}.file-list{margin:8px 0 0;padding:0;list-style:none;color:#657267;font-size:12px}.file-list li{padding:3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.actions{display:flex;gap:8px;flex-wrap:wrap}.button{min-height:44px;padding:0 14px;border:1px solid #cbd7c7;border-radius:6px;background:#fff;color:#1d2920;font:inherit;font-weight:650;cursor:pointer}.button.primary{border-color:#3f704b;background:#3f704b;color:#fff}.button:disabled{opacity:.5;cursor:not-allowed}.notice{padding:10px 12px;border-radius:6px;background:#eef3e7;color:#4b5b4e;font-size:12px}.error{padding:10px 12px;border-radius:6px;background:#f5e5df;color:#a3423d;font-size:13px}.status{color:#657267;font-size:13px}.result-card{margin-top:12px;padding:14px;border:1px solid #d2ddca;border-radius:7px;background:#fff}.result-card header{display:flex;align-items:center;gap:8px;margin-bottom:10px}.result-card header input{flex:1;min-width:0;padding:7px 8px;border:1px solid #cbd7c7;border-radius:5px;font:inherit;font-weight:650}.result-card textarea{width:100%;min-height:150px;padding:9px;border:1px solid #cbd7c7;border-radius:5px;resize:vertical;font:inherit;font-size:15px;line-height:1.7}.result-meta{margin-bottom:8px;color:#657267;font-size:12px}.result-meta input{width:100%;padding:7px 8px;border:1px solid #cbd7c7;border-radius:5px;font:inherit}.result-card label{display:block;margin-top:9px;color:#657267;font-size:12px;font-weight:650}.result-card label span{display:block;margin-bottom:4px}.result-count{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.result-count strong{font-size:16px}.result-count span{color:#657267;font-size:12px}.footer-note{margin-top:18px;color:#657267;font-size:12px;text-align:center}.danger-note{color:#87651d}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(prefers-color-scheme:dark){:root{color:#eef4f1;background:#101612}.app{background:#121815}.panel,.result-card{border-color:#344438;background:#19211e}.field input,.field textarea,.result-card header input,.result-card textarea,.result-meta input{border-color:#435747;background:#121815;color:#eef4f1}.notice{background:#173a2e;color:#b3c0bb}.file-picker{background:#173a2e;border-color:#55765a}.button{border-color:#435747;background:#19211e;color:#eef4f1}.eyebrow,.field small,.status,.result-meta,.result-count span,.footer-note{color:#8e9b96}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <span class="eyebrow">作文素材工具</span>
+  <h1 class="title">范文提取器</h1>
+  <p class="intro">一次处理多篇范文，让 DeepSeek 帮你整理成可直接导入学习工作台的作文素材。</p>
+
+  <section class="panel">
+    <h2>1. 选择范文</h2>
+    <label class="file-picker">选择多篇 TXT / MD 范文<input id="files" type="file" accept=".txt,.md,text/plain,text/markdown" multiple></label>
+    <ul id="fileList" class="file-list"></ul>
+    <label class="field" style="margin-top:12px"><span>也可以直接粘贴</span><textarea id="source" rows="7" placeholder="每篇范文之间用“====”分隔"></textarea></label>
+  </section>
+
+  <section class="panel">
+    <h2>2. AI 分析</h2>
+    <label class="field"><span>DeepSeek API Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="只保存在当前浏览器，不会写入项目"/><small>GitHub Pages 无法隐藏 API Key。建议使用专门的低额度 Key，用完可在 DeepSeek 控制台删除。</small></label>
+    <label class="field"><span>分析模型</span><input id="model" value="deepseek-chat" /></label>
+    <div class="notice">AI 会提取：标题、素材类型、主题、适用位置、可背诵正文和标签。结果生成后仍可手动修改。</div>
+    <div class="actions" style="margin-top:12px"><button id="analyze" class="button primary">开始 AI 提取</button><button id="clearKey" class="button" type="button">清除本机 Key</button></div>
+    <p id="status" class="status" role="status" style="margin-bottom:0"></p>
+    <p id="error" class="error" role="alert" hidden></p>
+  </section>
+
+  <section id="resultsPanel" class="panel" hidden>
+    <div class="result-count"><strong>提取结果</strong><span id="count"></span></div>
+    <div id="results"></div>
+    <div class="actions" style="margin-top:14px"><button id="copy" class="button primary">复制导入文本</button><button id="download" class="button">下载 .md 文件</button></div>
+    <p class="footer-note danger-note">导入家长软件：打开“资料库 → 批量导入背诵资料 → 作文模板”，粘贴或导入生成的 Markdown。</p>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id)
+  const keyStore = 'study-workbench-deepseek-key'
+  const state = { items: [], files: [] }
+  $('apiKey').value = localStorage.getItem(keyStore) || ''
+  $('files').addEventListener('change', async (event) => { state.files = [...event.target.files]; $('fileList').innerHTML = state.files.map(file => `<li>${escapeHtml(file.name)}</li>`).join(''); if (state.files.length) $('source').value = await Promise.all(state.files.map(file => file.text())).then(values => values.join('\n\n====\n\n')) })
+  $('clearKey').addEventListener('click', () => { localStorage.removeItem(keyStore); $('apiKey').value = ''; setStatus('已清除本机保存的 Key。') })
+  $('apiKey').addEventListener('change', () => { if ($('apiKey').value.trim()) localStorage.setItem(keyStore, $('apiKey').value.trim()) })
+  $('analyze').addEventListener('click', analyze)
+  $('copy').addEventListener('click', async () => { await navigator.clipboard.writeText(toMarkdown()); setStatus('已复制，可粘贴到家长软件的“作文模板”导入框。') })
+  $('download').addEventListener('click', () => { const blob = new Blob([toMarkdown()], {type:'text/markdown;charset=utf-8'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = '作文素材-DeepSeek提取.md'; link.click(); URL.revokeObjectURL(link.href) })
+  async function analyze() {
+    const source = $('source').value.trim(); if (!source) return showError('请先选择范文文件或粘贴范文。')
+    const apiKey = $('apiKey').value.trim(); if (!apiKey) return showError('请填写 DeepSeek API Key，Key 只会保存在当前浏览器。')
+    localStorage.setItem(keyStore, apiKey); setError(''); setStatus('正在分析范文，请稍候…'); $('analyze').disabled = true
+    try {
+      const prompt = `你是高中语文作文教研老师。请分析下面的多篇范文，并把每篇拆成可背诵、可迁移的作文素材。每篇至少输出 3 条素材，优先提取开头、结尾、分论点、论据和有文采的句子。只返回 JSON 数组，不要 Markdown，不要解释。每项字段必须是：title（简短中文标题）、type（结构模板/金句/论据/范文片段）、theme（主题，多个用顿号）、position（适用位置）、body（可直接背诵的正文，不要编造原文）、usage（如何迁移使用）、tags（字符串数组）。范文之间以 ==== 分隔：\n\n${source}`
+      const response = await fetch('https://api.deepseek.com/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model: $('model').value.trim() || 'deepseek-chat', temperature: 0.2, messages:[{role:'system',content:'你只输出合法 JSON 数组。'},{role:'user',content:prompt}]}) })
+      if (!response.ok) throw new Error(`DeepSeek 请求失败（${response.status}），请检查 Key、模型和网络。`)
+      const data = await response.json(); const content = data.choices?.[0]?.message?.content || ''; state.items = parseJson(content); if (!state.items.length) throw new Error('AI 没有返回可识别的素材，请缩短范文后重试。')
+      renderResults(); setStatus(`已提取 ${state.items.length} 条素材，请检查后复制或下载。`)
+    } catch (error) { showError(error.message || '分析失败，请重试。'); setStatus('') } finally { $('analyze').disabled = false }
+  }
+  function parseJson(text) { const cleaned = text.replace(/^```json\s*/i,'').replace(/```\s*$/,'').trim(); try { const value = JSON.parse(cleaned); return Array.isArray(value) ? value.map(normalize).filter(item => item.title && item.body) : [] } catch { const match = cleaned.match(/\[[\s\S]*\]/); if (!match) return []; try { const value = JSON.parse(match[0]); return Array.isArray(value) ? value.map(normalize).filter(item => item.title && item.body) : [] } catch { return [] } } }
+  function normalize(item) { return { title:String(item.title||'未命名素材'), type:String(item.type||'范文片段'), theme:String(item.theme||'未分类'), position:String(item.position||'作文素材'), body:String(item.body||''), usage:String(item.usage||''), tags:Array.isArray(item.tags)?item.tags.map(String):String(item.tags||'').split(/[、,，]/).filter(Boolean) } }
+  function renderResults() { $('resultsPanel').hidden=false; $('count').textContent=`共 ${state.items.length} 条`; $('results').innerHTML=state.items.map((item,index)=>`<article class="result-card"><header><span>${index+1}</span><input data-field="title" data-index="${index}" value="${escapeAttr(item.title)}" aria-label="第 ${index+1} 条标题"></header><div class="result-meta"><label>类型 / 主题 / 适用位置</label><input data-field="meta" data-index="${index}" value="${escapeAttr([item.type,item.theme,item.position].join(' · '))}" aria-label="第 ${index+1} 条分类"></div><label><span>可背诵正文</span><textarea data-field="body" data-index="${index}">${escapeHtml(item.body)}</textarea></label><label><span>使用说明</span><textarea data-field="usage" data-index="${index}" rows="2">${escapeHtml(item.usage)}</textarea></label><label><span>标签（用顿号或逗号分隔）</span><input data-field="tags" data-index="${index}" value="${escapeAttr(item.tags.join('、'))}" aria-label="第 ${index+1} 条标签"></label></article>`).join(''); $('results').querySelectorAll('[data-field]').forEach(input => input.addEventListener('input', () => { const item=state.items[Number(input.dataset.index)]; const field=input.dataset.field; if(field==='meta'){const parts=input.value.split(' · '); item.type=parts[0]||''; item.theme=parts[1]||''; item.position=parts.slice(2).join(' · ')||''} else if(field==='tags') item.tags=input.value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean); else item[field]=input.value })) }
+  function toMarkdown() { return ['【作文素材】DeepSeek 提取', '', ...state.items.map(item => `## ${item.title}\n【类型】${item.type}\n【主题】${item.theme}\n【适用位置】${item.position}\n${item.body}${item.usage ? `\n\n【使用说明】${item.usage}` : ''}\n【标签】${item.tags.join('、')}`).join('\n\n')].join('\n') }
+  function setStatus(text){ $('status').textContent=text }
+  function showError(text){ $('error').hidden=false; $('error').textContent=text; setStatus('') }
+  function setError(text){ $('error').hidden=!text; $('error').textContent=text }
+  function escapeHtml(value){ return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])) }
+  function escapeAttr(value){ return escapeHtml(value).replace(/\n/g,' ') }
+</script>
+</body>
+</html>

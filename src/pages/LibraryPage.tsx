@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Archive, BookOpenText, Camera, FileQuestion, FileText, FileUp, Images, Plus, Search, Tags, X } from 'lucide-react'
-import { type FormEvent, useMemo, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
@@ -128,6 +128,7 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
         <Field label="模板内容" hint={mode === 'idiom' ? '支持【组名】、#### 分栏标题，以及“成语：释义”格式。' : mode === 'knowledge' ? '格式：【数学知识】专题、### 标题、【考点精析】正文、【知识延伸】正文。' : '格式：【作文素材】主题、## 标题、【类型】、【适用位置】、正文、【标签】。'}>
           <textarea value={text} onChange={(event) => { setText(event.target.value); setParsed(null); setError('') }} rows={10} autoFocus placeholder={mode === 'idiom' ? '粘贴老师发来的成语模板…' : mode === 'knowledge' ? '粘贴数学、物理或其他学科知识点模板…' : '粘贴作文结构、金句或论据模板…'} />
         </Field>
+        <label className="file-import-button"><FileUp size={17} /> 选择 Markdown 文件<input className="sr-only" type="file" accept=".md,.txt,text/markdown,text/plain" onChange={async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; setText(await file.text()); setParsed(null); setError('') }} /></label>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button secondary full-button" type="submit">解析并预览</button>
       </form>
