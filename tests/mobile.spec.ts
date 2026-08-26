@@ -170,6 +170,26 @@ test('imports and reviews a structured math knowledge template', async ({ page }
   await expect(page.getByText(/求根公式为/)).toBeVisible()
 })
 
+test('imports an essay template into作文训练', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  await page.getByRole('tab', { name: /作文训练/ }).click()
+  await page.getByRole('button', { name: '批量导入作文素材' }).click()
+  await page.getByRole('tab', { name: '作文模板' }).click()
+  await page.getByLabel('模板内容').fill(`【作文素材】坚持主题
+
+## 议论文开头模板：由现象引出观点
+【类型】结构模板
+【适用位置】开头
+当我们面对【现象】时，真正值得思考的并不是表面的【表象】，而是隐藏在其中的【本质问题】。
+【标签】坚持、议论文、开头`)
+  await page.getByRole('button', { name: '解析并预览' }).click()
+  await expect(page.getByText(/作文训练/)).toBeVisible()
+  await page.getByRole('button', { name: '确认导入 1 条' }).click()
+  await expect(page.getByRole('heading', { name: '坚持主题' })).toBeVisible()
+  await page.getByRole('link', { name: /查看议论文开头模板/ }).click()
+  await expect(page.getByText(/真正值得思考/)).toBeVisible()
+})
+
 test('continues to the next due item after rating', async ({ page }) => {
   await page.getByRole('link', { name: '资料库' }).click()
   for (const title of ['成语一', '成语二']) {

@@ -1,26 +1,27 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Images, Plus, Search, Tags, X } from 'lucide-react'
+import { Archive, BookOpenText, Camera, FileQuestion, FileText, FileUp, Images, Plus, Search, Tags, X } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
 import { addContent, addMistakePhotoBatch, addRecitationTemplateItems } from '../services'
-import { parseKnowledgeTemplate, parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
+import { parseEssayTemplate, parseKnowledgeTemplate, parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
 import type { ContentItem, ContentType } from '../types'
+type LibraryTab = ContentType | 'essay'
 
 export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const location = useLocation()
-  const [tab, setTab] = useState<ContentType>(() => new URLSearchParams(location.search).get('type') === 'mistake' ? 'mistake' : 'recitation')
+  const [tab, setTab] = useState<LibraryTab>(() => { const type = new URLSearchParams(location.search).get('type'); return type === 'mistake' || type === 'essay' ? type : 'recitation' })
   const [query, setQuery] = useState('')
-  const [adding, setAdding] = useState<ContentType | null>(null)
+  const [adding, setAdding] = useState<LibraryTab | null>(null)
   const [importing, setImporting] = useState(false)
   const [archiveItem, setArchiveItem] = useState<ContentItem | null>(null)
   const [groupByTag, setGroupByTag] = useState(true)
   const items = useLiveQuery(() => db.contents.filter((item) => !item.archived).reverse().sortBy('createdAt')) ?? []
-  const filtered = useMemo(() => items.filter((item) => item.type === tab && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())), [items, query, tab])
+  const filtered = useMemo(() => items.filter((item) => (tab === 'essay' ? item.type === 'recitation' && item.category.startsWith('作文训练') : item.type === tab) && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())), [items, query, tab])
   const groups = useMemo(() => {
-    if (tab !== 'mistake' || !groupByTag) return [{ label: '', items: filtered }]
+    if (!['mistake', 'essay'].includes(tab) || !groupByTag) return [{ label: '', items: filtered }]
     const map = new Map<string, ContentItem[]>()
     filtered.forEach((item) => { const tag = item.tags[0] || '未分类'; map.set(tag, [...(map.get(tag) ?? []), item]) })
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'zh-CN')).map(([label, groupItems]) => ({ label, items: groupItems }))
@@ -38,13 +39,15 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
         <div><span className="eyebrow">知识资产</span><h1>资料库</h1></div>
         <div className="header-actions">
           {tab === 'recitation' && <button type="button" className="icon-button" onClick={() => setImporting(true)} aria-label="批量导入背诵资料"><FileUp size={21} /></button>}
-          <button type="button" className="icon-button solid" onClick={() => setAdding(tab)} aria-label={`添加${tab === 'recitation' ? '背诵' : '错题'}`}><Plus size={22} /></button>
+          {tab === 'essay' && <button type="button" className="icon-button" onClick={() => setImporting(true)} aria-label="批量导入作文素材"><FileUp size={21} /></button>}
+          <button type="button" className="icon-button solid" onClick={() => setAdding(tab)} aria-label={`添加${tab === 'recitation' ? '背诵' : tab === 'essay' ? '作文素材' : '错题'}`}><Plus size={22} /></button>
         </div>
       </header>
 
       <div className="segmented" role="tablist" aria-label="资料类型">
         <button role="tab" aria-selected={tab === 'recitation'} className={tab === 'recitation' ? 'active' : ''} onClick={() => setTab('recitation')}>背诵资料 <span>{items.filter((item) => item.type === 'recitation').length}</span></button>
         <button role="tab" aria-selected={tab === 'mistake'} className={tab === 'mistake' ? 'active' : ''} onClick={() => setTab('mistake')}>错题本 <span>{items.filter((item) => item.type === 'mistake').length}</span></button>
+        <button role="tab" aria-selected={tab === 'essay'} className={tab === 'essay' ? 'active' : ''} onClick={() => setTab('essay')}>作文训练 <span>{items.filter((item) => item.type === 'recitation' && item.category.startsWith('作文训练')).length}</span></button>
       </div>
 
       <label className="search-field">
@@ -53,7 +56,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题、科目或标签" />
       </label>
 
-      {tab === 'mistake' && <button type="button" className={`tag-group-toggle ${groupByTag ? 'active' : ''}`} aria-pressed={groupByTag} onClick={() => setGroupByTag((value) => !value)}><Tags size={17} /> {groupByTag ? '按标签分组中' : '按标签分组'}</button>}
+      {['mistake', 'essay'].includes(tab) && <button type="button" className={`tag-group-toggle ${groupByTag ? 'active' : ''}`} aria-pressed={groupByTag} onClick={() => setGroupByTag((value) => !value)}><Tags size={17} /> {groupByTag ? '按标签分组中' : '按标签分组'}</button>}
 
       {filtered.length ? (
         <div className="library-groups">
@@ -72,9 +75,9 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
         </div>
       ) : (
         <EmptyState
-          icon={tab === 'recitation' ? <BookOpenText size={28} /> : <FileQuestion size={28} />}
-          title={query ? '没有匹配的资料' : tab === 'recitation' ? '建立第一份背诵资料' : '收下第一道错题'}
-          text={query ? '换一个关键词试试。' : tab === 'recitation' ? '按段落录入文章或名言，系统会安排复习。' : '拍下原题，再补充答案、解析和错误原因。'}
+          icon={tab === 'recitation' ? <BookOpenText size={28} /> : tab === 'essay' ? <FileText size={28} /> : <FileQuestion size={28} />}
+          title={query ? '没有匹配的资料' : tab === 'recitation' ? '建立第一份背诵资料' : tab === 'essay' ? '建立第一份作文素材' : '收下第一道错题'}
+          text={query ? '换一个关键词试试。' : tab === 'recitation' ? '按段落录入文章或名言，系统会安排复习。' : tab === 'essay' ? '录入结构模板、金句或论据，系统会安排复习。' : '拍下原题，再补充答案、解析和错误原因。'}
           action={!query && <button className="button primary inline-button" onClick={() => setAdding(tab)}><Plus size={18} /> 立即添加</button>}
         />
       )}
@@ -87,7 +90,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
 }
 
 function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
-  const [mode, setMode] = useState<'idiom' | 'knowledge'>('idiom')
+  const [mode, setMode] = useState<'idiom' | 'knowledge' | 'essay'>('idiom')
   const [text, setText] = useState('')
   const [parsed, setParsed] = useState<ParsedRecitationTemplate | null>(null)
   const [error, setError] = useState('')
@@ -95,9 +98,9 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
 
   function preview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const result = mode === 'idiom' ? parseRecitationTemplate(text) : parseKnowledgeTemplate(text)
+    const result = mode === 'idiom' ? parseRecitationTemplate(text) : mode === 'knowledge' ? parseKnowledgeTemplate(text) : parseEssayTemplate(text)
     setParsed(result)
-    setError(result.items.length ? '' : mode === 'idiom' ? '没有识别到“成语：释义”格式，请确认模板内容完整。' : '没有识别到完整知识点。每条必须包含“### 标题”和“【考点精析】”。')
+    setError(result.items.length ? '' : mode === 'idiom' ? '没有识别到“成语：释义”格式，请确认模板内容完整。' : mode === 'knowledge' ? '没有识别到完整知识点。每条必须包含“### 标题”和“【考点精析】”。' : '没有识别到作文素材。每条必须包含“## 标题”和正文。')
   }
 
   async function importItems() {
@@ -105,7 +108,7 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
     setSaving(true)
     try {
       await addRecitationTemplateItems(parsed.items)
-      onSaved(`已导入 ${parsed.items.length} 条${mode === 'idiom' ? '成语' : '知识点'}，系统将按学习计划安排`)
+      onSaved(`已导入 ${parsed.items.length} 条${mode === 'idiom' ? '成语' : mode === 'knowledge' ? '知识点' : '作文素材'}，系统将按学习计划安排`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '导入失败，请重试。')
     } finally {
@@ -118,11 +121,12 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
       <div className="segmented import-type-tabs" role="tablist" aria-label="导入模板类型">
         <button type="button" role="tab" aria-selected={mode === 'idiom'} className={mode === 'idiom' ? 'active' : ''} onClick={() => { setMode('idiom'); setText(''); setParsed(null); setError('') }}>成语模板</button>
         <button type="button" role="tab" aria-selected={mode === 'knowledge'} className={mode === 'knowledge' ? 'active' : ''} onClick={() => { setMode('knowledge'); setText(''); setParsed(null); setError('') }}>知识点模板</button>
+        <button type="button" role="tab" aria-selected={mode === 'essay'} className={mode === 'essay' ? 'active' : ''} onClick={() => { setMode('essay'); setText(''); setParsed(null); setError('') }}>作文模板</button>
       </div>
       <form className="content-form" onSubmit={preview}>
-        <p className="dialog-copy">{mode === 'idiom' ? '每个“成语：释义”会转换成一条语文背诵资料。' : '每个“### 标题”会转换成一条背诵资料，考点精析和知识延伸分段复习。'}</p>
-        <Field label="模板内容" hint={mode === 'idiom' ? '支持【组名】、#### 分栏标题，以及“成语：释义”格式。' : '格式：【数学知识】专题、### 标题、【考点精析】正文、【知识延伸】正文。'}>
-          <textarea value={text} onChange={(event) => { setText(event.target.value); setParsed(null); setError('') }} rows={10} autoFocus placeholder={mode === 'idiom' ? '粘贴老师发来的成语模板…' : '粘贴数学、物理或其他学科知识点模板…'} />
+        <p className="dialog-copy">{mode === 'idiom' ? '每个“成语：释义”会转换成一条语文背诵资料。' : mode === 'knowledge' ? '每个“### 标题”会转换成一条背诵资料，考点精析和知识延伸分段复习。' : '每个“## 标题”会转换成一条作文素材，按主题和用途分类复习。'}</p>
+        <Field label="模板内容" hint={mode === 'idiom' ? '支持【组名】、#### 分栏标题，以及“成语：释义”格式。' : mode === 'knowledge' ? '格式：【数学知识】专题、### 标题、【考点精析】正文、【知识延伸】正文。' : '格式：【作文素材】主题、## 标题、【类型】、【适用位置】、正文、【标签】。'}>
+          <textarea value={text} onChange={(event) => { setText(event.target.value); setParsed(null); setError('') }} rows={10} autoFocus placeholder={mode === 'idiom' ? '粘贴老师发来的成语模板…' : mode === 'knowledge' ? '粘贴数学、物理或其他学科知识点模板…' : '粘贴作文结构、金句或论据模板…'} />
         </Field>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button secondary full-button" type="submit">解析并预览</button>
@@ -141,7 +145,7 @@ function ImportTemplateModal({ onClose, onSaved }: { onClose: () => void; onSave
   )
 }
 
-function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClose: () => void; onSaved: (message: string) => void }) {
+function AddContentModal({ type, onClose, onSaved }: { type: LibraryTab; onClose: () => void; onSaved: (message: string) => void }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [files, setFiles] = useState<File[]>([])
@@ -167,12 +171,12 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
       const title = String(form.get('title') ?? '').trim()
       const body = String(form.get('body') ?? '').trim()
       if (!title) throw new Error('请填写标题。')
-      if (type === 'recitation' && !body) throw new Error('请填写要背诵的正文。')
+      if ((type === 'recitation' || type === 'essay') && !body) throw new Error(type === 'essay' ? '请填写作文素材正文。' : '请填写要背诵的正文。')
       if (type === 'mistake' && !files.length) throw new Error('请拍照或从相册选择错题图片。')
       const commonValues = {
-        type,
+        type: type === 'essay' ? 'recitation' : type,
         title,
-        category: String(form.get('category') ?? '').trim(),
+        category: type === 'essay' ? `作文训练 · ${String(form.get('essayType') ?? '作文素材').trim() || '作文素材'}` : String(form.get('category') ?? '').trim(),
         subject: String(form.get('subject') ?? '').trim(),
         body,
         tags: String(form.get('tags') ?? '').split(/[,，]/).map((tag) => tag.trim()).filter(Boolean),
@@ -196,16 +200,16 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
   }
 
   return (
-    <Modal title={type === 'recitation' ? '添加背诵资料' : '添加错题'} onClose={onClose} wide>
+    <Modal title={type === 'recitation' ? '添加背诵资料' : type === 'essay' ? '添加作文素材' : '添加错题'} onClose={onClose} wide>
       <form className="content-form" onSubmit={submit}>
         <Field label={type === 'recitation' ? '标题' : files.length > 1 ? '标题前缀' : '标题'} hint={type === 'mistake' && files.length > 1 ? `将自动保存为“标题前缀 01”至“标题前缀 ${String(files.length).padStart(2, '0')}”。` : undefined}><input name="title" autoFocus maxLength={60} placeholder={type === 'recitation' ? '例如：劝学（节选）' : files.length > 1 ? '例如：八月数学错题' : '例如：函数单调性第 3 题'} /></Field>
-        {type === 'recitation' ? (
+        {type === 'recitation' || type === 'essay' ? (
           <>
             <div className="field-grid">
-              <Field label="分类"><input name="category" placeholder="文章 / 名言" /></Field>
+              <Field label={type === 'essay' ? '素材类型' : '分类'}><input name={type === 'essay' ? 'essayType' : 'category'} placeholder={type === 'essay' ? '结构模板 / 金句 / 论据' : '文章 / 名言'} /></Field>
               <Field label="学科"><input name="subject" placeholder="语文" /></Field>
             </div>
-            <Field label="正文" hint="请用换行分隔段落，复习时会逐段遮挡。"><textarea name="body" rows={9} placeholder="粘贴需要背诵的内容…" /></Field>
+            <Field label={type === 'essay' ? '素材正文' : '正文'} hint="请用换行分隔段落，复习时会逐段遮挡。"><textarea name="body" rows={9} placeholder={type === 'essay' ? '粘贴模板、金句或论据内容…' : '粘贴需要背诵的内容…'} /></Field>
           </>
         ) : (
           <>

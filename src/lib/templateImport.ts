@@ -112,3 +112,33 @@ export function parseKnowledgeTemplate(markdown: string): ParsedRecitationTempla
 
   return { group: [groupLabel, topic].filter(Boolean).join(' · '), countLabel: '', items }
 }
+
+export function parseEssayTemplate(markdown: string): ParsedRecitationTemplate {
+  let group = '作文素材'
+  let kind = '未分类'
+  let title = ''
+  let section = ''
+  let lines: string[] = []
+  const items: ParsedRecitationTemplateItem[] = []
+  function flush() {
+    const body = lines.join('\n').trim()
+    if (title && body && !items.some((item) => item.title === title)) {
+      items.push({ title, category: `作文训练 · ${kind} · ${section || '作文素材'}`, subject: '语文', body, tags: [kind, section || '作文素材', '作文'] })
+    }
+    lines = []
+  }
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || /^-{3,}$/.test(line)) continue
+    const groupHeader = line.match(/^【作文素材】\s*(.*)$/)
+    if (groupHeader && !title) { group = groupHeader[0]; kind = groupHeader[1].trim() || '未分类'; continue }
+    const heading = line.match(/^#{2,6}\s+(.+?)\s*$/)
+    if (heading) { flush(); title = heading[1].trim(); section = ''; continue }
+    const field = line.match(/^【([^】]+)】\s*(.*)$/)
+    if (field && !title) { kind = field[2].trim() || field[1].trim() || kind; continue }
+    if (field) { section = field[1].trim(); if (field[2]) lines.push(field[2].trim()); continue }
+    lines.push(line)
+  }
+  flush()
+  return { group, countLabel: '', items }
+}
