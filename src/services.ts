@@ -97,7 +97,19 @@ export async function addContent(
 export async function addMistakePhotoBatch(
   files: File[],
   values: Pick<ContentItem, 'title' | 'subject' | 'tags' | 'answer' | 'analysis' | 'errorReason'>,
+  mergeIntoOne = false,
 ): Promise<number> {
+  if (mergeIntoOne) {
+    const mediaIds: string[] = []
+    try {
+      for (const file of files) mediaIds.push((await saveMedia(file)).id)
+      await addContent({ type: 'mistake', title: values.title, category: '错题', subject: values.subject, body: '', tags: values.tags, imageIds: mediaIds, answer: values.answer, analysis: values.analysis, errorReason: values.errorReason })
+      return 1
+    } catch (error) {
+      if (mediaIds.length) await db.media.bulkDelete(mediaIds)
+      throw error
+    }
+  }
   let saved = 0
   const digits = Math.max(2, String(files.length).length)
   for (const [index, file] of files.entries()) {
@@ -125,6 +137,12 @@ export async function addMistakePhotoBatch(
     }
   }
   return saved
+}
+
+export async function updateContent(id: string, values: Partial<Pick<ContentItem, 'title' | 'category' | 'subject' | 'body' | 'tags' | 'answer' | 'analysis' | 'errorReason'>>): Promise<void> {
+  const item = await db.contents.get(id)
+  if (!item || item.archived) throw new Error('这条资料已不存在或已归档。')
+  await db.contents.update(id, { ...values, updatedAt: new Date().toISOString() })
 }
 
 export async function addRecitationTemplateItems(items: Array<Pick<ContentItem, 'title' | 'category' | 'subject' | 'body' | 'tags'>>): Promise<void> {

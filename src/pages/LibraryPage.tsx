@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Images, Plus, Search, X } from 'lucide-react'
+import { Archive, BookOpenText, Camera, FileQuestion, FileUp, Images, Plus, Search, Tags, X } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
@@ -16,8 +16,15 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const [adding, setAdding] = useState<ContentType | null>(null)
   const [importing, setImporting] = useState(false)
   const [archiveItem, setArchiveItem] = useState<ContentItem | null>(null)
+  const [groupByTag, setGroupByTag] = useState(true)
   const items = useLiveQuery(() => db.contents.filter((item) => !item.archived).reverse().sortBy('createdAt')) ?? []
   const filtered = useMemo(() => items.filter((item) => item.type === tab && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())), [items, query, tab])
+  const groups = useMemo(() => {
+    if (tab !== 'mistake' || !groupByTag) return [{ label: '', items: filtered }]
+    const map = new Map<string, ContentItem[]>()
+    filtered.forEach((item) => { const tag = item.tags[0] || '未分类'; map.set(tag, [...(map.get(tag) ?? []), item]) })
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'zh-CN')).map(([label, groupItems]) => ({ label, items: groupItems }))
+  }, [filtered, groupByTag, tab])
 
   async function archive() {
     if (!archiveItem) return
@@ -46,9 +53,13 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题、科目或标签" />
       </label>
 
+      {tab === 'mistake' && <button type="button" className={`tag-group-toggle ${groupByTag ? 'active' : ''}`} aria-pressed={groupByTag} onClick={() => setGroupByTag((value) => !value)}><Tags size={17} /> {groupByTag ? '按标签分组中' : '按标签分组'}</button>}
+
       {filtered.length ? (
-        <div className="library-list">
-          {filtered.map((item) => (
+        <div className="library-groups">
+          {groups.map((group) => <section className="library-group" key={group.label || 'all'}>
+            {group.label && <h2><Tags size={16} />{group.label}<span>{group.items.length}</span></h2>}
+            <div className="library-list">{group.items.map((item) => (
             <article key={item.id} className="library-row">
               <Link to={`/library/${item.id}`} className="library-main" aria-label={`查看${item.title}`}>
                 <span className={`library-icon ${item.type}`} aria-hidden="true">{item.type === 'recitation' ? <BookOpenText size={21} /> : <FileQuestion size={21} />}</span>
@@ -56,7 +67,8 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
               </Link>
               <button type="button" className="icon-button subtle" aria-label={`归档${item.title}`} onClick={() => setArchiveItem(item)}><Archive size={19} /></button>
             </article>
-          ))}
+            ))}</div>
+          </section>)}
         </div>
       ) : (
         <EmptyState
@@ -133,6 +145,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [mergePhotos, setMergePhotos] = useState(false)
 
   function addFiles(nextFiles: File[]) {
     setFiles((current) => {
@@ -169,8 +182,8 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
         errorReason: String(form.get('errorReason') ?? '').trim(),
       }
       if (type === 'mistake') {
-        const count = await addMistakePhotoBatch(files, commonValues)
-        onSaved(`已导入 ${count} 道错题并加入今天的新内容`)
+        const count = await addMistakePhotoBatch(files, commonValues, mergePhotos)
+        onSaved(mergePhotos ? '已保存 1 道错题（含多张照片）并加入今天的新内容' : `已导入 ${count} 道错题并加入今天的新内容`)
       } else {
         await addContent(commonValues)
         onSaved('背诵资料已加入今天的新内容')
@@ -213,6 +226,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
                   <div className="selected-photo-list">
                     {files.map((selected, index) => <SelectedPhotoRow key={`${selected.name}-${selected.size}-${selected.lastModified}`} file={selected} index={index} onRemove={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} />)}
                   </div>
+                  {files.length > 1 && <label className="merge-photos-option"><input type="checkbox" checked={mergePhotos} onChange={(event) => setMergePhotos(event.target.checked)} /><span><strong>合并为一道错题</strong><small>多张照片属于同一道题时使用</small></span></label>}
                 </div>
               )}
             </Field>
@@ -224,7 +238,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
         )}
         <Field label="标签" hint="多个标签用逗号分隔。"><input name="tags" placeholder="期中, 重点" /></Field>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="button primary full-button" disabled={saving}>{saving ? `正在压缩并保存 ${files.length || 1} 张…` : type === 'mistake' && files.length > 1 ? `保存 ${files.length} 道并加入复习` : '保存并加入复习'}</button>
+        <button className="button primary full-button" disabled={saving}>{saving ? `正在压缩并保存 ${files.length || 1} 张…` : type === 'mistake' && files.length > 1 && !mergePhotos ? `保存 ${files.length} 道并加入复习` : '保存并加入复习'}</button>
       </form>
     </Modal>
   )

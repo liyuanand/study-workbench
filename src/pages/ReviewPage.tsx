@@ -85,8 +85,7 @@ function RecitationReview({ item, notify }: { item: ContentItem; notify: (messag
 }
 
 function MistakeReview({ item, notify }: { item: ContentItem; notify: (message: string) => void }) {
-  const media = useLiveQuery(() => item.imageIds[0] ? db.media.get(item.imageIds[0]) : undefined, [item.imageIds[0]])
-  const url = useObjectUrl(media?.blob)
+  const media = useLiveQuery(() => item.imageIds.length ? db.media.bulkGet(item.imageIds) : [], [item.imageIds.join(',')]) ?? []
   const [revealed, setRevealed] = useState(false)
   return (
     <div className="review-page">
@@ -94,12 +93,12 @@ function MistakeReview({ item, notify }: { item: ContentItem; notify: (message: 
       {!revealed ? (
         <section className="mistake-stage">
           <p className="review-prompt">先独立思考并在纸上完成，再查看答案。</p>
-          <div className="question-image-wrap">{url ? <img src={url} alt={`${item.title}原题`} /> : <div className="image-missing">题目图片未找到</div>}</div>
+          <ReviewImageGallery media={media} title={item.title} />
           <button type="button" className="button primary full-button review-action" onClick={() => setRevealed(true)}><Eye size={19} /> 查看答案与解析</button>
         </section>
       ) : (
         <section className="answer-stage">
-          <div className="question-image-wrap compact">{url && <img src={url} alt={`${item.title}原题`} />}</div>
+          <ReviewImageGallery media={media} title={item.title} compact />
           <AnswerBlock label="正确答案" text={item.answer || '未填写'} />
           <AnswerBlock label="解析" text={item.analysis || '未填写'} />
           <AnswerBlock label="上次错误原因" text={item.errorReason || '未填写'} tone="warning" />
@@ -108,6 +107,15 @@ function MistakeReview({ item, notify }: { item: ContentItem; notify: (message: 
       )}
     </div>
   )
+}
+
+function ReviewImageGallery({ media, title, compact = false }: { media: Array<{ blob: Blob } | undefined>; title: string; compact?: boolean }) {
+  return <div className={`question-image-gallery ${compact ? 'compact' : ''}`}>{media.map((asset, index) => <ReviewImage key={index} asset={asset} title={title} index={index} />)}</div>
+}
+
+function ReviewImage({ asset, title, index }: { asset?: { blob: Blob }; title: string; index: number }) {
+  const url = useObjectUrl(asset?.blob)
+  return url ? <div className="question-image-wrap"><img src={url} alt={`${title}原题${index + 1}`} /></div> : null
 }
 
 function AnswerBlock({ label, text, tone = '' }: { label: string; text: string; tone?: string }) {
