@@ -188,6 +188,8 @@ test('imports an essay template into作文训练', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '坚持主题' })).toBeVisible()
   await page.getByRole('link', { name: /查看议论文开头模板/ }).click()
   await expect(page.getByText(/真正值得思考/)).toBeVisible()
+  await page.getByRole('link', { name: '返回资料库' }).click()
+  await expect(page.getByRole('tab', { name: /作文训练/ })).toHaveAttribute('aria-selected', 'true')
 })
 
 test('continues to the next due item after rating', async ({ page }) => {

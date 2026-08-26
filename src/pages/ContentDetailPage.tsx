@@ -15,11 +15,12 @@ export function ContentDetailPage() {
 
   if (item === undefined) return <div className="detail-state">正在打开资料…</div>
   if (!item) return <div className="detail-state"><p>这条资料不存在或已移除。</p><Link className="button secondary" to="/library">返回资料库</Link></div>
+  const libraryType = item.type === 'recitation' && item.category.startsWith('作文训练') ? 'essay' : item.type
 
   return (
     <div className="page detail-page">
       <header className="detail-header">
-        <Link to={`/library?type=${item.type}`} className="icon-button" aria-label="返回资料库"><ArrowLeft size={22} /></Link>
+        <Link to={`/library?type=${libraryType}`} className="icon-button" aria-label="返回资料库"><ArrowLeft size={22} /></Link>
         <div><span>资料详情</span><h1>{item.title}</h1></div>
         <span className={`detail-type ${item.type}`}>
           {item.type === 'recitation' ? <><BookOpenText size={15} /> 背诵</> : <><FileQuestion size={15} /> 错题</>}
