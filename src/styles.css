@@ -236,6 +236,8 @@ p, h1, h2, h3 { margin-top: 0; }
 .question-image-gallery { display: flex; flex-direction: column; gap: 12px; }
 .question-image-gallery.compact { max-height: 360px; overflow-y: auto; margin-bottom: 6px; }
 .question-image-gallery.compact .question-image-wrap { min-height: 0; }
+.review-image-item { margin: 0; }
+.review-image-item figcaption { margin-bottom: 6px; color: var(--text-3); font-size: 12px; }
 .question-image-wrap.compact { min-height: 0; max-height: 180px; margin-bottom: 18px; }
 .question-image-wrap.compact img { max-height: 180px; }
 .image-missing { color: var(--text-3); font-size: 14px; }

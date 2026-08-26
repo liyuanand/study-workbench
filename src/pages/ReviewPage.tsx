@@ -110,12 +110,12 @@ function MistakeReview({ item, notify }: { item: ContentItem; notify: (message: 
 }
 
 function ReviewImageGallery({ media, title, compact = false }: { media: Array<{ blob: Blob } | undefined>; title: string; compact?: boolean }) {
-  return <div className={`question-image-gallery ${compact ? 'compact' : ''}`}>{media.map((asset, index) => <ReviewImage key={index} asset={asset} title={title} index={index} />)}</div>
+  return <div className={`question-image-gallery ${compact ? 'compact' : ''}`}>{media.map((asset, index) => <ReviewImage key={index} asset={asset} title={title} index={index} total={media.length} />)}</div>
 }
 
-function ReviewImage({ asset, title, index }: { asset?: { blob: Blob }; title: string; index: number }) {
+function ReviewImage({ asset, title, index, total }: { asset?: { blob: Blob }; title: string; index: number; total: number }) {
   const url = useObjectUrl(asset?.blob)
-  return url ? <div className="question-image-wrap"><img src={url} alt={`${title}原题${index + 1}`} /></div> : null
+  return url ? <figure className="review-image-item"><figcaption>图片 {index + 1} / {total}</figcaption><div className="question-image-wrap"><img src={url} alt={`${title}原题${index + 1}`} /></div></figure> : null
 }
 
 function AnswerBlock({ label, text, tone = '' }: { label: string; text: string; tone?: string }) {

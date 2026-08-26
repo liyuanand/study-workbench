@@ -145,7 +145,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [files, setFiles] = useState<File[]>([])
-  const [mergePhotos, setMergePhotos] = useState(false)
+  const [mergePhotos, setMergePhotos] = useState(true)
 
   function addFiles(nextFiles: File[]) {
     setFiles((current) => {
@@ -209,7 +209,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
           </>
         ) : (
           <>
-            <Field label="原题照片" hint="可连续拍照或从相册多选；每张照片会生成一道独立错题。">
+            <Field label="错题相关图片" hint="可连续拍照或从相册多选；多张图片默认保存在同一道错题中，并按选择顺序展示。">
               <div className="photo-source-grid">
                 <label className="photo-source-button">
                   <Camera size={22} /><span>拍照</span>
@@ -226,7 +226,7 @@ function AddContentModal({ type, onClose, onSaved }: { type: ContentType; onClos
                   <div className="selected-photo-list">
                     {files.map((selected, index) => <SelectedPhotoRow key={`${selected.name}-${selected.size}-${selected.lastModified}`} file={selected} index={index} onRemove={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} />)}
                   </div>
-                  {files.length > 1 && <label className="merge-photos-option"><input type="checkbox" checked={mergePhotos} onChange={(event) => setMergePhotos(event.target.checked)} /><span><strong>合并为一道错题</strong><small>多张照片属于同一道题时使用</small></span></label>}
+                  {files.length > 1 && <label className="merge-photos-option"><input type="checkbox" checked={mergePhotos} onChange={(event) => setMergePhotos(event.target.checked)} /><span><strong>保存为同一道错题</strong><small>{mergePhotos ? '复习时会按顺序查看全部图片' : '关闭后，每张图片生成一道独立错题'}</small></span></label>}
                 </div>
               )}
             </Field>
