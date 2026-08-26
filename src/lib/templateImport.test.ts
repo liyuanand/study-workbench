@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseEssayTemplate, parseKnowledgeTemplate, parseRecitationTemplate } from './templateImport'
+import { normalizeEssayMarkdown, parseEssayTemplate, parseKnowledgeTemplate, parseRecitationTemplate } from './templateImport'
 
 describe('parseRecitationTemplate', () => {
   it('parses group, sections and idiom definitions', () => {
@@ -75,5 +75,23 @@ describe('parseEssayTemplate', () => {
 【标签】议论文、开头`)
     expect(result.items[0]).toMatchObject({ category: '作文训练 · 坚持、成长 · 结构模板', body: '真正的坚持，需要在行动中不断积累。\n\n【使用说明】替换题目关键词。' })
     expect(result.items[0].tags).toContain('开头')
+  })
+
+  it('accepts compact headings and body fields', () => {
+    const result = parseEssayTemplate(`\uFEFF【作文素材】责任主题
+##责任的结尾
+【类型】金句
+【正文】责任不是负担，而是成长的刻度。
+【标签】责任、结尾`)
+    expect(result.items[0].title).toBe('责任的结尾')
+    expect(result.items[0].body).toBe('责任不是负担，而是成长的刻度。')
+  })
+
+  it('repairs the old character-per-line export', () => {
+    const valid = `## 坚持开头\n【类型】结构模板\n真正的坚持来自行动。\n【标签】坚持、开头`
+    const broken = `【作文素材】旧版导出\n\n${[...valid].join('\n')}`
+    expect(normalizeEssayMarkdown(broken)).toContain('## 坚持开头')
+    const result = parseEssayTemplate(broken)
+    expect(result.items[0]).toMatchObject({ title: '坚持开头', body: '真正的坚持来自行动。' })
   })
 })
