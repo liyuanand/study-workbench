@@ -1,12 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookOpenText, Check, Eye, EyeOff, HelpCircle, RotateCcw, Sparkles } from 'lucide-react'
+import { ArrowLeft, BookOpenText, Check, Eye, EyeOff, HelpCircle, RotateCcw, Sparkles, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
 import { toDateKey } from '../lib/date'
 import { calculateReviewOutcome } from '../lib/schedule'
-import { advanceReviewSession, completeReview, getOrCreateReviewSession } from '../services'
+import { advanceReviewSession, completeReview, getOrCreateReviewSession, toggleContentStar } from '../services'
 import type { ContentItem, ReviewRating } from '../types'
 
 export function ReviewPage({ notify }: { notify: (message: string) => void }) {
@@ -43,6 +43,7 @@ function ReviewHeader({ item }: { item: ContentItem }) {
       <Link to="/today" className="icon-button" aria-label="退出复习，进度会保留" title="退出复习，进度会保留"><ArrowLeft size={22} /></Link>
       <div><span>{item.type === 'recitation' ? '背诵复习' : '错题复习'}</span><strong>{item.title}</strong></div>
       <span className="stage-badge">{item.reviewStage < 0 ? '新' : `${item.reviewStage + 1} 阶`}</span>
+      <button type="button" className={`icon-button star-button ${item.starred ? 'active' : ''}`} aria-label={item.starred ? '取消星标' : '添加星标'} aria-pressed={Boolean(item.starred)} onClick={() => toggleContentStar(item.id)}><Star size={20} fill={item.starred ? 'currentColor' : 'none'} /></button>
     </header>
   )
 }

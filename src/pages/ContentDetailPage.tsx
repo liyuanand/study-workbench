@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookOpenText, Edit3, FileQuestion } from 'lucide-react'
+import { ArrowLeft, BookOpenText, Edit3, FileQuestion, Star } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
-import { updateContent } from '../services'
+import { toggleContentStar, updateContent } from '../services'
 import type { ContentItem } from '../types'
 
 export function ContentDetailPage() {
@@ -26,6 +26,7 @@ export function ContentDetailPage() {
           {item.type === 'recitation' ? <><BookOpenText size={15} /> 背诵</> : <><FileQuestion size={15} /> 错题</>}
         </span>
         <button type="button" className="icon-button subtle" aria-label="编辑资料" onClick={() => setEditing(true)}><Edit3 size={19} /></button>
+        <button type="button" className={`icon-button star-button ${item.starred ? 'active' : ''}`} aria-label={item.starred ? '取消星标' : '添加星标'} aria-pressed={Boolean(item.starred)} onClick={() => toggleContentStar(item.id)}><Star size={20} fill={item.starred ? 'currentColor' : 'none'} /></button>
       </header>
 
       <dl className="detail-meta">

@@ -24,6 +24,23 @@ test('adds and reviews a recitation item', async ({ page }) => {
   await expect(page.getByText('今天的到期任务完成了')).toBeVisible()
 })
 
+test('stars a review item and keeps starred items first in the library', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  for (const title of ['普通成语', '重点成语']) {
+    await page.getByRole('button', { name: '添加背诵' }).click()
+    await page.getByLabel('标题').fill(title)
+    await page.getByLabel('正文').fill(`${title}的释义。`)
+    await page.getByRole('button', { name: '保存并加入复习' }).click()
+  }
+  await page.getByRole('link', { name: '查看重点成语' }).click()
+  await page.getByRole('button', { name: '添加星标' }).click()
+  await page.getByRole('link', { name: '返回资料库' }).click()
+  const titles = await page.locator('.library-copy strong').allTextContents()
+  expect(titles.slice(0, 2)).toEqual(['重点成语', '普通成语'])
+  await page.getByRole('link', { name: '查看重点成语' }).click()
+  await expect(page.getByRole('button', { name: '取消星标' })).toBeVisible()
+})
+
 test('sets a parent pin and reaches reward management', async ({ page }) => {
   await page.getByRole('link', { name: '我的' }).click()
   await page.getByRole('button', { name: /家长入口/ }).click()

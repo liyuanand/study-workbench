@@ -19,7 +19,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const [archiveItem, setArchiveItem] = useState<ContentItem | null>(null)
   const [groupByTag, setGroupByTag] = useState(true)
   const items = useLiveQuery(() => db.contents.filter((item) => !item.archived).reverse().sortBy('createdAt')) ?? []
-  const filtered = useMemo(() => items.filter((item) => (tab === 'essay' ? item.type === 'recitation' && item.category.startsWith('作文训练') : item.type === tab) && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())), [items, query, tab])
+  const filtered = useMemo(() => items.filter((item) => (tab === 'essay' ? item.type === 'recitation' && item.category.startsWith('作文训练') : item.type === tab) && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt)), [items, query, tab])
   const groups = useMemo(() => {
     if (!['mistake', 'essay'].includes(tab) || !groupByTag) return [{ label: '', items: filtered }]
     const map = new Map<string, ContentItem[]>()

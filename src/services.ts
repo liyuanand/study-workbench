@@ -145,6 +145,14 @@ export async function updateContent(id: string, values: Partial<Pick<ContentItem
   await db.contents.update(id, { ...values, updatedAt: new Date().toISOString() })
 }
 
+export async function toggleContentStar(id: string): Promise<boolean> {
+  const item = await db.contents.get(id)
+  if (!item || item.archived) throw new Error('这条资料已不存在或已归档。')
+  const starred = !item.starred
+  await db.contents.update(id, { starred, updatedAt: new Date().toISOString() })
+  return starred
+}
+
 export async function addRecitationTemplateItems(items: Array<Pick<ContentItem, 'title' | 'category' | 'subject' | 'body' | 'tags'>>): Promise<void> {
   const now = new Date().toISOString()
   const records = items.map((values) => ({

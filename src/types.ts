@@ -19,6 +19,7 @@ export interface ContentItem {
   dueDate: string
   reviewStage: number
   archived: boolean
+  starred?: boolean
 }
 
 export interface MediaAsset {
