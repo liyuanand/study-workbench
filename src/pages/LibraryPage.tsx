@@ -10,6 +10,12 @@ import { parseEssayTemplate, parseKnowledgeTemplate, parseRecitationTemplate, ty
 import type { ContentItem, ContentType } from '../types'
 type LibraryTab = ContentType | 'essay'
 
+const groupTagPattern = /第[一二三四五六七八九十百千两〇零\d]+组/u
+
+function getGroupLabel(item: ContentItem) {
+  return item.tags.find((tag) => groupTagPattern.test(tag)) || item.tags[0] || '未分类'
+}
+
 export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const location = useLocation()
   const [tab, setTab] = useState<LibraryTab>(() => { const type = new URLSearchParams(location.search).get('type'); return type === 'mistake' || type === 'essay' ? type : 'recitation' })
@@ -19,11 +25,18 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const [archiveItem, setArchiveItem] = useState<ContentItem | null>(null)
   const [groupByTag, setGroupByTag] = useState(true)
   const items = useLiveQuery(() => db.contents.filter((item) => !item.archived).reverse().sortBy('createdAt')) ?? []
-  const filtered = useMemo(() => items.filter((item) => (tab === 'essay' ? item.type === 'recitation' && item.category.startsWith('作文训练') : item.type === tab) && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt)), [items, query, tab])
+  const filtered = useMemo(() => items.filter((item) => {
+    const matchesTab = tab === 'essay'
+      ? item.type === 'recitation' && item.category.startsWith('作文训练')
+      : tab === 'recitation'
+        ? item.type === 'recitation' && !item.category.startsWith('作文训练')
+        : item.type === 'mistake'
+    return matchesTab && [item.title, item.subject, item.category, ...item.tags].join(' ').toLowerCase().includes(query.trim().toLowerCase())
+  }).sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt)), [items, query, tab])
   const groups = useMemo(() => {
-    if (!['mistake', 'essay'].includes(tab) || !groupByTag) return [{ label: '', items: filtered }]
+    if (!groupByTag) return [{ label: '', items: filtered }]
     const map = new Map<string, ContentItem[]>()
-    filtered.forEach((item) => { const tag = item.tags[0] || '未分类'; map.set(tag, [...(map.get(tag) ?? []), item]) })
+    filtered.forEach((item) => { const tag = getGroupLabel(item); map.set(tag, [...(map.get(tag) ?? []), item]) })
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'zh-CN')).map(([label, groupItems]) => ({ label, items: groupItems }))
   }, [filtered, groupByTag, tab])
 
@@ -45,7 +58,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
       </header>
 
       <div className="segmented" role="tablist" aria-label="资料类型">
-        <button role="tab" aria-selected={tab === 'recitation'} className={tab === 'recitation' ? 'active' : ''} onClick={() => setTab('recitation')}>背诵资料 <span>{items.filter((item) => item.type === 'recitation').length}</span></button>
+        <button role="tab" aria-selected={tab === 'recitation'} className={tab === 'recitation' ? 'active' : ''} onClick={() => setTab('recitation')}>背诵资料 <span>{items.filter((item) => item.type === 'recitation' && !item.category.startsWith('作文训练')).length}</span></button>
         <button role="tab" aria-selected={tab === 'mistake'} className={tab === 'mistake' ? 'active' : ''} onClick={() => setTab('mistake')}>错题本 <span>{items.filter((item) => item.type === 'mistake').length}</span></button>
         <button role="tab" aria-selected={tab === 'essay'} className={tab === 'essay' ? 'active' : ''} onClick={() => setTab('essay')}>作文训练 <span>{items.filter((item) => item.type === 'recitation' && item.category.startsWith('作文训练')).length}</span></button>
       </div>
@@ -56,7 +69,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题、科目或标签" />
       </label>
 
-      {['mistake', 'essay'].includes(tab) && <button type="button" className={`tag-group-toggle ${groupByTag ? 'active' : ''}`} aria-pressed={groupByTag} onClick={() => setGroupByTag((value) => !value)}><Tags size={17} /> {groupByTag ? '按标签分组中' : '按标签分组'}</button>}
+      <button type="button" className={`tag-group-toggle ${groupByTag ? 'active' : ''}`} aria-pressed={groupByTag} onClick={() => setGroupByTag((value) => !value)}><Tags size={17} /> {groupByTag ? '按标签分组中' : '按标签分组'}</button>
 
       {filtered.length ? (
         <div className="library-groups">

@@ -173,6 +173,27 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
   await expect(page.getByLabel('全部待复习进度 0 / 2')).toBeVisible()
 })
 
+test('groups recitation materials by group tags', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+
+  for (const [group, theme, title] of [['第一组', '文化传承', '一脉相承'], ['第二组', '责任担当', '挺身而出']]) {
+    await page.getByRole('button', { name: '批量导入背诵资料' }).click()
+    await page.getByLabel('模板内容').fill(`【${group}】${theme}（1 个）\n\n#### 重点成语\n\n${title}：用于测试标签分组。`)
+    await page.getByRole('button', { name: '解析并预览' }).click()
+    await page.getByRole('button', { name: '确认导入 1 条' }).click()
+  }
+
+  await expect(page.getByRole('heading', { name: '第一组 · 文化传承 1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '第二组 · 责任担当 1' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '查看一脉相承' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '查看挺身而出' })).toBeVisible()
+
+  await page.getByRole('button', { name: '按标签分组中' }).click()
+  await expect(page.getByRole('heading', { name: /第一组 · 文化传承/ })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /第二组 · 责任担当/ })).toHaveCount(0)
+  await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 375)
+})
+
 test('caps a large import at 100 new items per day', async ({ page }) => {
   const rows = Array.from({ length: 105 }, (_, index) => `成语${String(index + 1).padStart(3, '0')}：第 ${index + 1} 条释义。`).join('\n')
   await page.getByRole('link', { name: '资料库' }).click()
@@ -235,6 +256,8 @@ test('imports an essay template into作文训练', async ({ page }) => {
   await expect(page.getByText(/真正值得思考/)).toBeVisible()
   await page.getByRole('link', { name: '返回资料库' }).click()
   await expect(page.getByRole('tab', { name: /作文训练/ })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: /背诵资料/ }).click()
+  await expect(page.getByRole('link', { name: /查看议论文开头模板/ })).toHaveCount(0)
 })
 
 test('continues to the next due item after rating', async ({ page }) => {
