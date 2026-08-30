@@ -170,6 +170,12 @@ p, h1, h2, h3 { margin-top: 0; }
 .detail-images img { width: 100%; height: auto; max-height: 68dvh; object-fit: contain; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); }
 .detail-empty { color: var(--text-3); font-size: 14px !important; }
 .detail-state { min-height: calc(100dvh - 86px); padding: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-2); }
+.detail-browser { min-height: 68px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; border-top: 1px solid var(--border); background: var(--surface); }
+.detail-browser > span { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.detail-browser button { min-width: 0; min-height: 44px; padding: 0 10px; border: 0; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; color: var(--primary); background: var(--primary-soft); font-weight: 650; }
+.detail-browser button:last-child { justify-self: end; }
+.detail-browser button:first-child { justify-self: start; }
+.detail-browser button:disabled { color: var(--text-3); background: var(--surface-2); }
 
 .modal-backdrop { position: fixed; z-index: 500; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: env(safe-area-inset-top); background: rgba(13, 20, 18, .56); }
 .modal-sheet { width: 100%; max-width: 480px; max-height: min(86dvh, 760px); display: flex; flex-direction: column; background: var(--surface); border-radius: 8px 8px 0 0; box-shadow: var(--shadow); animation: sheet-in .22s ease-out; }

@@ -35,10 +35,38 @@ test('stars a review item and keeps starred items first in the library', async (
   await page.getByRole('link', { name: '查看重点成语' }).click()
   await page.getByRole('button', { name: '添加星标' }).click()
   await page.getByRole('link', { name: '返回资料库' }).click()
+  await expect(page.locator('.library-copy strong').first()).toHaveText('重点成语')
   const titles = await page.locator('.library-copy strong').allTextContents()
   expect(titles.slice(0, 2)).toEqual(['重点成语', '普通成语'])
   await page.getByRole('link', { name: '查看重点成语' }).click()
   await expect(page.getByRole('button', { name: '取消星标' })).toBeVisible()
+})
+
+test('browses recitation details with previous and next controls', async ({ page }) => {
+  await page.getByRole('link', { name: '资料库' }).click()
+  for (const title of ['浏览资料一', '浏览资料二']) {
+    await page.getByRole('button', { name: '添加背诵' }).click()
+    await page.getByLabel('标题').fill(title)
+    await page.getByLabel('正文').fill(`${title}正文。`)
+    await page.getByRole('button', { name: '保存并加入复习' }).click()
+  }
+  await page.getByRole('link', { name: '查看浏览资料二' }).click()
+  await expect(page.getByText('1 / 2')).toBeVisible()
+  await page.getByRole('button', { name: '下一条：浏览资料一' }).click()
+  await expect(page.getByRole('heading', { name: '浏览资料一' })).toBeVisible()
+  await expect(page.getByText('2 / 2')).toBeVisible()
+  await page.getByRole('button', { name: '上一条：浏览资料二' }).click()
+  await expect(page.getByRole('heading', { name: '浏览资料二' })).toBeVisible()
+  await page.locator('.detail-page').dispatchEvent('touchstart', { changedTouches: [{ identifier: 1, clientX: 310, clientY: 320 }] })
+  await page.locator('.detail-page').dispatchEvent('touchend', { changedTouches: [{ identifier: 1, clientX: 70, clientY: 325 }] })
+  await expect(page.getByRole('heading', { name: '浏览资料一' })).toBeVisible()
+  await page.locator('.detail-page').dispatchEvent('touchstart', { changedTouches: [{ identifier: 2, clientX: 70, clientY: 320 }] })
+  await page.locator('.detail-page').dispatchEvent('touchend', { changedTouches: [{ identifier: 2, clientX: 310, clientY: 325 }] })
+  await expect(page.getByRole('heading', { name: '浏览资料二' })).toBeVisible()
+  await page.locator('.detail-page').dispatchEvent('touchstart', { changedTouches: [{ identifier: 3, clientX: 210, clientY: 180 }] })
+  await page.locator('.detail-page').dispatchEvent('touchend', { changedTouches: [{ identifier: 3, clientX: 190, clientY: 520 }] })
+  await expect(page.getByRole('heading', { name: '浏览资料二' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)
 })
 
 test('sets a parent pin and reaches reward management', async ({ page }) => {

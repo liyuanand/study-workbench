@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookOpenText, Edit3, FileQuestion, Star } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Edit3, FileQuestion, Star } from 'lucide-react'
+import { type FormEvent, type TouchEvent, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
@@ -10,15 +10,47 @@ import type { ContentItem } from '../types'
 
 export function ContentDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const item = useLiveQuery(() => id ? db.contents.get(id) : undefined, [id])
+  const browseItems = useLiveQuery(async () => {
+    if (!item || item.type !== 'recitation' || item.category.startsWith('作文训练')) return []
+    const records = await db.contents.filter((entry) => !entry.archived && entry.type === 'recitation' && !entry.category.startsWith('作文训练')).toArray()
+    return records.sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt))
+  }, [item?.id, item?.type, item?.category, item?.starred]) ?? []
   const [editing, setEditing] = useState(false)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   if (item === undefined) return <div className="detail-state">正在打开资料…</div>
   if (!item) return <div className="detail-state"><p>这条资料不存在或已移除。</p><Link className="button secondary" to="/library">返回资料库</Link></div>
   const libraryType = item.type === 'recitation' && item.category.startsWith('作文训练') ? 'essay' : item.type
+  const browseIndex = browseItems.findIndex((entry) => entry.id === item.id)
+  const previousItem = browseIndex > 0 ? browseItems[browseIndex - 1] : undefined
+  const nextItem = browseIndex >= 0 && browseIndex < browseItems.length - 1 ? browseItems[browseIndex + 1] : undefined
+
+  function openBrowseItem(target?: ContentItem) {
+    if (!target) return
+    navigate(`/library/${target.id}`)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0]
+    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const start = touchStart.current
+    const touch = event.changedTouches[0]
+    touchStart.current = null
+    if (!start || !touch) return
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return
+    openBrowseItem(deltaX < 0 ? nextItem : previousItem)
+  }
 
   return (
-    <div className="page detail-page">
+    <div className="page detail-page" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <header className="detail-header">
         <Link to={`/library?type=${libraryType}`} className="icon-button" aria-label="返回资料库"><ArrowLeft size={22} /></Link>
         <div><span>资料详情</span><h1>{item.title}</h1></div>
@@ -52,6 +84,11 @@ export function ContentDetailPage() {
           <DetailSection label="错误原因" text={item.errorReason} tone="warning" />
         </div>
       )}
+      {browseIndex >= 0 && browseItems.length > 1 && <nav className="detail-browser" aria-label="背诵资料浏览">
+        <button type="button" onClick={() => openBrowseItem(previousItem)} disabled={!previousItem} aria-label={previousItem ? `上一条：${previousItem.title}` : '已经是第一条'}><ChevronLeft size={20} /><span>上一条</span></button>
+        <span>{browseIndex + 1} / {browseItems.length}</span>
+        <button type="button" onClick={() => openBrowseItem(nextItem)} disabled={!nextItem} aria-label={nextItem ? `下一条：${nextItem.title}` : '已经是最后一条'}><span>下一条</span><ChevronRight size={20} /></button>
+      </nav>}
       {editing && <EditContentModal item={item} onClose={() => setEditing(false)} />}
     </div>
   )
