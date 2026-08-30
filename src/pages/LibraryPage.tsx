@@ -6,15 +6,10 @@ import { ConfirmDialog, EmptyState, Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
 import { addContent, addMistakePhotoBatch, addRecitationTemplateItems } from '../services'
+import { getContentGroupLabel } from '../lib/contentGrouping'
 import { parseEssayTemplate, parseKnowledgeTemplate, parseRecitationTemplate, type ParsedRecitationTemplate } from '../lib/templateImport'
 import type { ContentItem, ContentType } from '../types'
 type LibraryTab = ContentType | 'essay'
-
-const groupTagPattern = /第[一二三四五六七八九十百千两〇零\d]+组/u
-
-function getGroupLabel(item: ContentItem) {
-  return item.tags.find((tag) => groupTagPattern.test(tag)) || item.tags[0] || '未分类'
-}
 
 export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const location = useLocation()
@@ -36,7 +31,7 @@ export function LibraryPage({ notify }: { notify: (message: string) => void }) {
   const groups = useMemo(() => {
     if (!groupByTag) return [{ label: '', items: filtered }]
     const map = new Map<string, ContentItem[]>()
-    filtered.forEach((item) => { const tag = getGroupLabel(item); map.set(tag, [...(map.get(tag) ?? []), item]) })
+    filtered.forEach((item) => { const tag = getContentGroupLabel(item); map.set(tag, [...(map.get(tag) ?? []), item]) })
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'zh-CN')).map(([label, groupItems]) => ({ label, items: groupItems }))
   }, [filtered, groupByTag, tab])
 

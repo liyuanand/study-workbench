@@ -176,17 +176,28 @@ test('imports a teacher idiom template into recitation items', async ({ page }) 
 test('groups recitation materials by group tags', async ({ page }) => {
   await page.getByRole('link', { name: '资料库' }).click()
 
-  for (const [group, theme, title] of [['第一组', '文化传承', '一脉相承'], ['第二组', '责任担当', '挺身而出']]) {
+  const imports = [
+    { group: '第一组', theme: '文化传承', rows: ['一脉相承：用于测试标签分组。', '薪火相传：用于测试组内浏览。'] },
+    { group: '第二组', theme: '责任担当', rows: ['挺身而出：用于测试标签分组。'] },
+  ]
+  for (const { group, theme, rows } of imports) {
     await page.getByRole('button', { name: '批量导入背诵资料' }).click()
-    await page.getByLabel('模板内容').fill(`【${group}】${theme}（1 个）\n\n#### 重点成语\n\n${title}：用于测试标签分组。`)
+    await page.getByLabel('模板内容').fill(`【${group}】${theme}（${rows.length} 个）\n\n#### 重点成语\n\n${rows.join('\n')}`)
     await page.getByRole('button', { name: '解析并预览' }).click()
-    await page.getByRole('button', { name: '确认导入 1 条' }).click()
+    await page.getByRole('button', { name: `确认导入 ${rows.length} 条` }).click()
   }
 
-  await expect(page.getByRole('heading', { name: '第一组 · 文化传承 1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '第一组 · 文化传承 2' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '第二组 · 责任担当 1' })).toBeVisible()
   await expect(page.getByRole('link', { name: '查看一脉相承' })).toBeVisible()
   await expect(page.getByRole('link', { name: '查看挺身而出' })).toBeVisible()
+
+  await page.getByRole('link', { name: '查看一脉相承' }).click()
+  await expect(page.locator('.detail-browser')).toContainText(/^[\s\S]*[12] \/ 2[\s\S]*$/)
+  await expect(page.getByRole('button', { name: /挺身而出/ })).toHaveCount(0)
+  await page.locator('.detail-browser button:not(:disabled)').click()
+  await expect(page.getByRole('heading', { name: '薪火相传' })).toBeVisible()
+  await page.getByRole('link', { name: '返回资料库' }).click()
 
   await page.getByRole('button', { name: '按标签分组中' }).click()
   await expect(page.getByRole('heading', { name: /第一组 · 文化传承/ })).toHaveCount(0)

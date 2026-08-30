@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Field, Modal } from '../components/ui'
 import { db } from '../db'
 import { useObjectUrl } from '../hooks'
+import { getContentGroupLabel } from '../lib/contentGrouping'
 import { toggleContentStar, updateContent } from '../services'
 import type { ContentItem } from '../types'
 
@@ -12,11 +13,14 @@ export function ContentDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const item = useLiveQuery(() => id ? db.contents.get(id) : undefined, [id])
+  const browseGroup = item ? getContentGroupLabel(item) : ''
   const browseItems = useLiveQuery(async () => {
     if (!item || item.type !== 'recitation' || item.category.startsWith('作文训练')) return []
     const records = await db.contents.filter((entry) => !entry.archived && entry.type === 'recitation' && !entry.category.startsWith('作文训练')).toArray()
-    return records.sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt))
-  }, [item?.id, item?.type, item?.category, item?.starred]) ?? []
+    return records
+      .filter((entry) => getContentGroupLabel(entry) === browseGroup)
+      .sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt))
+  }, [item?.id, item?.type, item?.category, item?.starred, browseGroup]) ?? []
   const [editing, setEditing] = useState(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
