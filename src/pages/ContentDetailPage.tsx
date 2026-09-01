@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Edit3, FileQuestion, Star } from 'lucide-react'
-import { type FormEvent, type TouchEvent, useRef, useState } from 'react'
+import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Edit3, FileQuestion, ListFilter, Star } from 'lucide-react'
+import { type FormEvent, type TouchEvent, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Field, Modal } from '../components/ui'
 import { db } from '../db'
@@ -14,14 +14,24 @@ export function ContentDetailPage() {
   const navigate = useNavigate()
   const item = useLiveQuery(() => id ? db.contents.get(id) : undefined, [id])
   const browseGroup = item ? getContentGroupLabel(item) : ''
-  const browseItems = useLiveQuery(async () => {
+  const allBrowseItems = useLiveQuery(async () => {
     if (!item || item.type !== 'recitation' || item.category.startsWith('作文训练')) return []
-    const records = await db.contents.filter((entry) => !entry.archived && entry.type === 'recitation' && !entry.category.startsWith('作文训练')).toArray()
-    return records
-      .filter((entry) => getContentGroupLabel(entry) === browseGroup)
-      .sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt))
-  }, [item?.id, item?.type, item?.category, item?.starred, browseGroup]) ?? []
+    return db.contents.filter((entry) => !entry.archived && entry.type === 'recitation' && !entry.category.startsWith('作文训练')).toArray()
+  }, [item?.type, item?.category]) ?? []
+  const sortBrowseItems = (records: ContentItem[]) => records.sort((a, b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || b.createdAt.localeCompare(a.createdAt))
+  const browseItems = useMemo(() => sortBrowseItems(allBrowseItems.filter((entry) => getContentGroupLabel(entry) === browseGroup)), [allBrowseItems, browseGroup])
+  const browseGroups = useMemo(() => {
+    const map = new Map<string, ContentItem[]>()
+    for (const entry of allBrowseItems) {
+      const label = getContentGroupLabel(entry)
+      map.set(label, [...(map.get(label) ?? []), entry])
+    }
+    return [...map.entries()]
+      .map(([label, records]) => ({ label, items: sortBrowseItems(records) }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'))
+  }, [allBrowseItems])
   const [editing, setEditing] = useState(false)
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   if (item === undefined) return <div className="detail-state">正在打开资料…</div>
@@ -35,6 +45,11 @@ export function ContentDetailPage() {
     if (!target) return
     navigate(`/library/${target.id}`)
     window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  function switchBrowseGroup(target: ContentItem) {
+    setGroupPickerOpen(false)
+    openBrowseItem(target)
   }
 
   function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
@@ -88,11 +103,22 @@ export function ContentDetailPage() {
           <DetailSection label="错误原因" text={item.errorReason} tone="warning" />
         </div>
       )}
-      {browseIndex >= 0 && browseItems.length > 1 && <nav className="detail-browser" aria-label="背诵资料浏览">
-        <button type="button" onClick={() => openBrowseItem(previousItem)} disabled={!previousItem} aria-label={previousItem ? `上一条：${previousItem.title}` : '已经是第一条'}><ChevronLeft size={20} /><span>上一条</span></button>
-        <span>{browseIndex + 1} / {browseItems.length}</span>
-        <button type="button" onClick={() => openBrowseItem(nextItem)} disabled={!nextItem} aria-label={nextItem ? `下一条：${nextItem.title}` : '已经是最后一条'}><span>下一条</span><ChevronRight size={20} /></button>
-      </nav>}
+      {browseIndex >= 0 && <div className="detail-browser-wrap">
+        {browseItems.length > 1 && <nav className="detail-browser" aria-label="背诵资料浏览">
+          <button type="button" onClick={() => openBrowseItem(previousItem)} disabled={!previousItem} aria-label={previousItem ? `上一条：${previousItem.title}` : '已经是第一条'}><ChevronLeft size={20} /><span>上一条</span></button>
+          <span>{browseIndex + 1} / {browseItems.length}</span>
+          <button type="button" onClick={() => openBrowseItem(nextItem)} disabled={!nextItem} aria-label={nextItem ? `下一条：${nextItem.title}` : '已经是最后一条'}><span>下一条</span><ChevronRight size={20} /></button>
+        </nav>}
+        {browseGroups.length > 1 && <button type="button" className="detail-group-switch" onClick={() => setGroupPickerOpen(true)}><ListFilter size={18} />切换组别</button>}
+      </div>}
+      {groupPickerOpen && <Modal title="切换组别" onClose={() => setGroupPickerOpen(false)}>
+        <div className="detail-group-options" role="list">
+          {browseGroups.map((group) => <button type="button" role="listitem" key={group.label} className={`detail-group-option ${group.label === browseGroup ? 'active' : ''}`} onClick={() => switchBrowseGroup(group.items[0])}>
+            <span><strong>{group.label}</strong><small>{group.items.length} 条资料</small></span>
+            {group.label === browseGroup && <small>当前组</small>}
+          </button>)}
+        </div>
+      </Modal>}
       {editing && <EditContentModal item={item} onClose={() => setEditing(false)} />}
     </div>
   )
